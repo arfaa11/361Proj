@@ -5,7 +5,7 @@ Student names: - Arfaa Mumtaz
                - Olasubomi Badiru
 Instructor name: Mahdi Firoozjaei
 Assignment: Secure Mail Transfer Project
-Program name: Server.py
+Program name: Client_enhanced.py
 Program purpose: <TODO>
 '''
 
@@ -16,9 +16,9 @@ import glob
 import datetime as dt
 import sys
 
-def server():
+def enhancedClient():
     pass
 
 if __name__ == "__main__":
-    #server()
+    #enhancedClient()
     pass
