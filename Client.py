@@ -4,7 +4,7 @@ Student names: - Arfaa Mumtaz
                - Kevin Esperida
                - Olasubomi Badiru
 Instructor name: Mahdi Firoozjaei
-Assignment: Project
+Assignment: Secure Mail Transfer Project
 Program name: Client.py
 Program purpose: <TODO>
 '''
@@ -17,4 +17,8 @@ import datetime as dt
 import sys
 
 def client():
+    pass
+
+if __name__ == "__main__":
+    #client()
     pass
