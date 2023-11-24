@@ -33,37 +33,37 @@ def generateKeys(username, outputDir):
         pubKeyFile.write(pubKey)
 
 if __name__ == "__main__":
-    # Specify the server machine directory where server keys will be stored
+    # Specify the ServerMachine directory where server keys will be stored
     serverDir = "ServerMachine"  
 
-    # Create the server machine directory if it doesn't exist
+    # Create the ServerMachine directory if it doesn't exist
     if not os.path.exists(serverDir):
         os.mkdir(serverDir)
 
-    # Generate key pairs for the server in the server machine directory
+    # Generate key pairs for the server in the ServerMachine directory
     generateKeys("server", serverDir)
 
-    # Specify the client machine directory where client keys will be stored
+    # Specify the ClientMachine directory where client keys will be stored
     clientDir = "ClientMachine" 
 
-    # Create the client machine directory if it doesn't exist
+    # Create the ClientMachine directory if it doesn't exist
     if not os.path.exists(clientDir):
         os.mkdir(clientDir)
 
     # List of usernames for which key pairs will be generated (excluding "server")
     clientUsernames = ["client1", "client2", "client3", "client4", "client5"]
 
-    # Generate key pairs for known clients in the client machine directory
+    # Generate key pairs for known clients in the ClientMachine directory
     for username in clientUsernames:
         generateKeys(username, clientDir)
 
-    # Copy the server's public key to the client machine directory
+    # Copy the server's public key to the ClientMachine directory
     serverPubKeySrc = os.path.join(serverDir, "server_public.pem")
     serverPubKeyDest = os.path.join(clientDir, "server_public.pem")
     with open(serverPubKeySrc, 'rb') as srcFile, open(serverPubKeyDest, 'wb') as destFile:
         destFile.write(srcFile.read())
 
-    # Copy all client public keys to the server machine directory
+    # Copy all client public keys to the ServerMachine directory
     for username in clientUsernames:
         clientPubKeySrc = os.path.join(clientDir, f'{username}_public.pem')
         clientPubKeyDest = os.path.join(serverDir, f'{username}_public.pem')
