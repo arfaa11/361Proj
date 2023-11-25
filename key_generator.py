@@ -1,35 +1,71 @@
+'''
+Student names: - Arfaa Mumtaz
+               - Cory Beaunoyer
+               - Kevin Esperida
+               - Olasubomi Badiru
+Instructor name: Mahdi Firoozjaei
+Assignment: Secure Mail Transfer Project
+Program name: key_generator.py
+Program purpose: <TODO>
+'''
+
+import os
 from Crypto.PublicKey import RSA
-from Crypto.Random import get_random_bytes
-from Crypto.Cipher import PKCS1_OAEP
 
-#Key Generator
-filenames = [
-	['server_private.pem','server_public.pem'],
-	['client1_private.pem','client1_public.pem'],
-	['client2_private.pem','client2_public.pem'],
-	['client3_private.pem','client3_public.pem'],
-	['client4_private.pem','client4_public.pem'],
-	['client5_private.pem','client5_public.pem'],
-]
+def generateKeys(username, outputDir):
+    # Generate a new RSA key pair with a key length of 2048 bits
+    key = RSA.generate(2048)
 
-machIndex = 0
-while machIndex < len(filenames):
-	print(filenames[machIndex])
-	# Generate private and public keys
-	key = RSA.generate(2048)
-	private_key = key.export_key()
-	print(private_key)
-	public_key = key.publickey().export_key()
-	print(public_key)
-	
-	with open(filenames[machIndex][0], 'wb') as file:
-		#Write the bytes to the file
-		file.write(private_key)
-	
-	with open(filenames[machIndex][1], 'wb') as file:
-		file.write(public_key)
-	
-	machIndex += 1
-	
-	
-	
+    # Export the private key as a PEM-formatted string
+    privKey = key.export_key()
+
+    # Export the public key as a PEM-formatted string
+    pubKey = key.publickey().export_key()
+
+    # Save the private key to a file with the username as part of the filename
+    privKeyFilename = os.path.join(outputDir, f'{username}_private.pem')
+    with open(privKeyFilename, 'wb') as privKeyFile:
+        privKeyFile.write(privKey)
+
+    # Save the public key to a file with the username as part of the filename
+    pubKeyFilename = os.path.join(outputDir, f'{username}_public.pem')
+    with open(pubKeyFilename, 'wb') as pubKeyFile:
+        pubKeyFile.write(pubKey)
+
+if __name__ == "__main__":
+    # Specify the ServerMachine directory where server keys will be stored
+    serverDir = "ServerMachine"  
+
+    # Create the ServerMachine directory if it doesn't exist
+    if not os.path.exists(serverDir):
+        os.mkdir(serverDir)
+
+    # Generate key pairs for the server in the ServerMachine directory
+    generateKeys("server", serverDir)
+
+    # Specify the ClientMachine directory where client keys will be stored
+    clientDir = "ClientMachine" 
+
+    # Create the ClientMachine directory if it doesn't exist
+    if not os.path.exists(clientDir):
+        os.mkdir(clientDir)
+
+    # List of usernames for which key pairs will be generated (excluding "server")
+    clientUsernames = ["client1", "client2", "client3", "client4", "client5"]
+
+    # Generate key pairs for known clients in the ClientMachine directory
+    for username in clientUsernames:
+        generateKeys(username, clientDir)
+
+    # Copy the server's public key to the ClientMachine directory
+    serverPubKeySrc = os.path.join(serverDir, "server_public.pem")
+    serverPubKeyDest = os.path.join(clientDir, "server_public.pem")
+    with open(serverPubKeySrc, 'rb') as srcFile, open(serverPubKeyDest, 'wb') as destFile:
+        destFile.write(srcFile.read())
+
+    # Copy all client public keys to the ServerMachine directory
+    for username in clientUsernames:
+        clientPubKeySrc = os.path.join(clientDir, f'{username}_public.pem')
+        clientPubKeyDest = os.path.join(serverDir, f'{username}_public.pem')
+        with open(clientPubKeySrc, 'rb') as srcFile, open(clientPubKeyDest, 'wb') as destFile:
+            destFile.write(srcFile.read())
