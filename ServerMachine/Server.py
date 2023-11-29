@@ -43,8 +43,6 @@ clientPubKeys = {}
 for username in user_passData:
     with open(f'{username}_public.pem', 'rb') as pubKeyFile:
         clientPubKeys[username] = RSA.import_key(pubKeyFile.read())
-# CONSTANTS
-JSONFILE = "server.json"
 
 
 #------------------------------------------------------------------------------
@@ -110,7 +108,7 @@ def recvDecryptedMsg(connectionSocket, symKey):
     decryptedMsg = unpad(cipher.decrypt(encryptedMsg), AES.block_size)
     return decryptedMsg.decode('ascii')
 
-def handleEmailOperations(connectionSocket, username, encryptedSymKey):
+def handleEmailOperations(connectionSocket, username, symKey):
     """
     Purpose: Function to handle email related operations with the client.
     Parameters:
@@ -126,29 +124,29 @@ def handleEmailOperations(connectionSocket, username, encryptedSymKey):
 
     
     
-    choice = getChoice(connectionSocket,encryptedSymKey)
+    choice = getChoice(connectionSocket,symKey)
     while (choice):
         match choice:
             case 1:
                 print("the sending email subprotocol")
-                sendEmailProtocol(connectionSocket,encryptedSymKey, username)
+                sendEmailProtocol(connectionSocket,symKey, username)
             case 2:
                 print("the viewing inbox subprotocol")
-                viewInboxProtocol(connectionSocket,encryptedSymKey, username)
+                viewInboxProtocol(connectionSocket,symKey, username)
             case 3:
                 print("the viewing email subprotocol")
-                viewEmailProtocol(connectionSocket,encryptedSymKey, username)
+                viewEmailProtocol(connectionSocket,symKey, username)
             case 4:
                 print("connection termination subprotocol")
                 connectionSocket.close()
                 return
             case _:
                 break
-        choice = getChoice(connectionSocket,encryptedSymKey)
+        choice = getChoice(connectionSocket,symKey)
 
     return
 
-def sendEmailProtocol(connectionSocket,encryptedSymKey, username):
+def sendEmailProtocol(connectionSocket,symKey, username):
     '''
     Function to handle email sending protocol
     inputs:
@@ -163,35 +161,35 @@ def sendEmailProtocol(connectionSocket,encryptedSymKey, username):
         
         message = "Send the email"  
         # potential conflict here (conflicting spec instructions), check for server logic error in client.py
-        sendEncryptedMsg(connectionSocket, message, encryptedSymKey)
+        sendEncryptedMsg(connectionSocket, message, symKey)
         
         # Get destinations
         message = "\nEnter destinations (separated by ;): "  
-        sendEncryptedMsg(connectionSocket, message, encryptedSymKey)
+        sendEncryptedMsg(connectionSocket, message, symKey)
         
-        dest = recvDecryptedMsg(connectionSocket, encryptedSymKey)
+        dest = recvDecryptedMsg(connectionSocket, symKey)
         destS = dest.split(";")  #split into array of destination  
 
         # Get Email Title
         message = "\nEnter Title: "  
-        sendEncryptedMsg(connectionSocket, message, encryptedSymKey)
+        sendEncryptedMsg(connectionSocket, message, symKey)
         
-        title = recvDecryptedMsg(connectionSocket, encryptedSymKey)
+        title = recvDecryptedMsg(connectionSocket, symKey)
         
         # Get message
         message = "\nWould you like to load contents from a file?  (Y/N): "  
-        sendEncryptedMsg(connectionSocket, message, encryptedSymKey)
+        sendEncryptedMsg(connectionSocket, message, symKey)
         
-        choice = recvDecryptedMsg(connectionSocket, encryptedSymKey)
+        choice = recvDecryptedMsg(connectionSocket, symKey)
         messageSize = 0
         '''TODO: Dump email contents to json file'''
         match choice.upper():
             case 'Y':
                 ''' do some file transfer operations'''
                 message = "\nEnter filename: "  
-                sendEncryptedMsg(connectionSocket, message, encryptedSymKey)
+                sendEncryptedMsg(connectionSocket, message, symKey)
 
-                fName = recvDecryptedMsg(connectionSocket, encryptedSymKey)
+                fName = recvDecryptedMsg(connectionSocket, symKey)
                 fName, fSize = fName.split(",")
                 fSize = int(fSize)      # don't forget to get client to send file name and file size
                 
@@ -199,7 +197,7 @@ def sendEmailProtocol(connectionSocket,encryptedSymKey, username):
                 '''receive file'''
                 with open(f'{fName}', 'rb') as fOut:
                     fOut = open(f"ServerReceive/{fName}", "wb")
-                    data = recvDecryptedMsg(connectionSocket, encryptedSymKey)
+                    data = recvDecryptedMsg(connectionSocket, symKey)
                     datalen = len(data)
                     
                     
@@ -213,9 +211,9 @@ def sendEmailProtocol(connectionSocket,encryptedSymKey, username):
                     '''Send message: The message is sent to the server? '''
             case 'N':
                 message = "\nEnter message contents: "  
-                sendEncryptedMsg(connectionSocket, message, encryptedSymKey)
+                sendEncryptedMsg(connectionSocket, message, symKey)
                 
-                email = recvDecryptedMsg(connectionSocket, encryptedSymKey)
+                email = recvDecryptedMsg(connectionSocket, symKey)
                 messageSize = len(email)
             case _:
                 pass
@@ -227,7 +225,7 @@ def sendEmailProtocol(connectionSocket,encryptedSymKey, username):
         return
     return
 
-def viewInboxProtocol(connectionSocket,encryptedSymKey, username, JSONFILE):
+def viewInboxProtocol(connectionSocket,symKey, username):
     '''
     Function to handle email sending protocol
     inputs:
@@ -260,16 +258,16 @@ def viewInboxProtocol(connectionSocket,encryptedSymKey, username, JSONFILE):
         sendMessage += f"\n{x}\t\t\t{dBase[item]['From']}\t\t{dBase[item]['DateTime']}\t\t\t\t\t{dBase[item]['Title']}"
     
     sendMessage += "\n"
-    sendEncryptedMsg(connectionSocket, sendMessage, encryptedSymKey)  
+    sendEncryptedMsg(connectionSocket, sendMessage, symKey)  
 
     return
 
-def viewEmailProtocol(connectionSocket,encryptedSymKey, username):
+def viewEmailProtocol(connectionSocket,symKey, username):
 
     return
 
 
-def getChoice(connectionSocket,encryptedSymKey):
+def getChoice(connectionSocket,symKey):
     '''
     Get choice from user
     Input:
@@ -280,8 +278,8 @@ def getChoice(connectionSocket,encryptedSymKey):
                 "\n\t2) Display the inbox list\n\t3) Display the email contents"
                 "\n\t4) Terminate the connection\nchoice:")
     
-    sendEncryptedMsg(connectionSocket, menumessage, encryptedSymKey)
-    choice = recvDecryptedMsg(connectionSocket, encryptedSymKey)
+    sendEncryptedMsg(connectionSocket, menumessage, symKey)
+    choice = recvDecryptedMsg(connectionSocket, symKey)
     
     return int(choice)
     
@@ -315,7 +313,7 @@ def handleClient(connectionSocket):
 
     ''' <TODO> '''
     # We will add code here when we are done with the email subprotocol
-    handleEmailOperations(connectionSocket, username)
+    handleEmailOperations(connectionSocket, username, symKey)
 
     
     
