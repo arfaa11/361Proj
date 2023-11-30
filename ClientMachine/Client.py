@@ -163,7 +163,27 @@ def client():
         clientSocket.send(encryptMessage("OK", symKey))
 
         menu = decryptMessage(clientSocket.recv(1024),symKey)
-        print(menu)
+        choice = input(menu)
+
+        while choice != '0':
+            
+            match choice:
+                case 1:
+                    ''' Sub protocol 1'''
+                    pass
+                case 2:
+                    ''' sub protocol 2'''
+                    pass
+                case 3:
+                    ''' su protocol 3'''
+                    pass
+                case _:
+                    ''' default is break from loop and close'''
+                    break
+            menu = decryptMessage(clientSocket.recv(1024),symKey)
+            choice = input(menu)
+
+
         #begin while loop
 
         ''' <TODO> '''

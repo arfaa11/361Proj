@@ -226,6 +226,8 @@ def sendEmailProtocol(connectionSocket,symKey, username):
                 
                 email = recvDecryptedMsg(connectionSocket, symKey)
                 messageSize = len(email)
+
+                #  send message to destinations...
             case _:
                 pass
         
