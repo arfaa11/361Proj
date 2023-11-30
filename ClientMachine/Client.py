@@ -114,7 +114,7 @@ def client():
     """
     # Server IP address and port number
     serverIP = input("Enter the server IP or name: ")
-    serverPort = 13001
+    serverPort = 13000
 
     # Create a socket to connect to the server
     clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -168,13 +168,13 @@ def client():
         while choice != '0':
             
             match choice:
-                case 1:
+                case '1':
                     ''' Sub protocol 1'''
                     pass
-                case 2:
+                case '2':
                     ''' sub protocol 2'''
                     pass
-                case 3:
+                case 1:
                     ''' su protocol 3'''
                     pass
                 case _:

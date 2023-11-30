@@ -392,7 +392,7 @@ def handleClient(connectionSocket):
 #------------------------------------------------------------------------------
 def server():
     serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    serverSocket.bind(('localhost', 13001))
+    serverSocket.bind(('localhost', 13000))
     serverSocket.listen(5)
 
     print("Server is ready to accept connections")
