@@ -82,6 +82,27 @@ def decryptMessage(encryptedMsg, key):
     decryptedMsg = unpad(cipher.decrypt(encryptedMsg), AES.block_size)
     return decryptedMsg.decode('ascii')
 
+
+#------------------------------------------------------------------------------
+# Helper functions for Email interactions
+#------------------------------------------------------------------------------
+
+def makeEmail(source,message, title, dest):
+    '''
+    Input: 
+        source: string
+        message: string
+        title: string
+        dest: list of strings containing destinations
+    Output:
+        return full edited message or -1 if the message is too long 
+    '''
+    dest  = dest.join(";")
+    length = len(message)
+    if len(message) <= 1000000:
+        return (f"\nFrom: {source}\nTo: {dest}\nTitle: {title}"
+                 "\nContent Length: {length}\nContent:\n{message}")
+
 #------------------------------------------------------------------------------
 # Main client function
 #------------------------------------------------------------------------------
