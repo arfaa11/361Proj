@@ -127,16 +127,16 @@ def handleEmailOperations(connectionSocket, username, symKey):
     choice = getChoice(connectionSocket,symKey)
     while (choice):
         match choice:
-            case 1:
+            case '1':
                 print("the sending email subprotocol")
                 sendEmailProtocol(connectionSocket,symKey, username)
-            case 2:
+            case '2':
                 print("the viewing inbox subprotocol")
                 viewInboxProtocol(connectionSocket,symKey, username)
-            case 3:
+            case '3':
                 print("the viewing email subprotocol")
                 viewEmailProtocol(connectionSocket,symKey, username)
-            case 4:
+            case '4':
                 print("connection termination subprotocol")
                 connectionSocket.close()
                 return
@@ -276,12 +276,12 @@ def getChoice(connectionSocket,symKey):
     '''
     menumessage = ("\nSelect the operation:\n\t1) Create and send and email"
                 "\n\t2) Display the inbox list\n\t3) Display the email contents"
-                "\n\t4) Terminate the connection\nchoice:")
+                "\n\t4) Terminate the connection\n\tchoice: ")
     
     sendEncryptedMsg(connectionSocket, menumessage, symKey)
     choice = recvDecryptedMsg(connectionSocket, symKey)
     
-    return int(choice)
+    return choice
     
     
 
@@ -313,7 +313,8 @@ def handleClient(connectionSocket):
     check = recvDecryptedMsg(connectionSocket, symKey)
    
     if check == "OK":
-        #handleEmailOperations(connectionSocket, username, symKey)
+        handleEmailOperations(connectionSocket, username, symKey)
+
         pass
     ''' <TODO> '''
     # We will add code here when we are done with the email subprotocol
