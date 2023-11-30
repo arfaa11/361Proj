@@ -143,7 +143,6 @@ def client():
     symKeyCipher = PKCS1_OAEP.new(privateKey)
     
     symKey = symKeyCipher.decrypt(encryptedSymKey)
-    print(symKey)
     # Check for invalid username or password response
     if symKey == b"Invalid username or password":
         print("Invalid username or password.\nTerminating.")
@@ -154,6 +153,14 @@ def client():
         print("Authentication successful.")
         # Send an acknowledgment message
         clientSocket.send(encryptMessage("OK", symKey))
+
+        menu = clientSocket.recv(1024)
+        menu = decryptMessage(menu, symKey)
+        print(menu,end= '')
+        choice = input()
+
+        encryptedChoice = encryptMessage(choice, symKey)
+        clientSocket.send(encryptedChoice)
 
         ''' <TODO> '''
         # I have not yet worked on the main client-server interaction
