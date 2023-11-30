@@ -99,7 +99,7 @@ def makeEmail(source,message, title, dest):
     '''
     dest  = dest.join(";")
     length = len(message)
-    if len(message) <= 1000000:
+    if length <= 1000000:
         return (f"\nFrom: {source}\nTo: {dest}\nTitle: {title}"
                  "\nContent Length: {length}\nContent:\n{message}")
     return
@@ -143,10 +143,11 @@ def client():
     encryptedSymKey = clientSocket.recv(1024)
     privateKey = loadPrivateKey(username)
     if privateKey is None:
-        print("Error: Private key not found.")
+        #print("Error: Private key not found.")
         return
 
     symKeyCipher = PKCS1_OAEP.new(privateKey)
+    
     symKey = symKeyCipher.decrypt(encryptedSymKey)
     #print(symKey)
 
