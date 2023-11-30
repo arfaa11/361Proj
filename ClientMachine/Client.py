@@ -99,9 +99,10 @@ def makeEmail(source,message, title, dest):
     '''
     dest  = dest.join(";")
     length = len(message)
-    if len(message) <= 1000000:
+    if length <= 1000000:
         return (f"\nFrom: {source}\nTo: {dest}\nTitle: {title}"
                  "\nContent Length: {length}\nContent:\n{message}")
+    return
 
 #------------------------------------------------------------------------------
 # Main client function
@@ -128,20 +129,27 @@ def client():
     cipher = PKCS1_OAEP.new(serverPubKey)
     encryptedUser = cipher.encrypt(username.encode())
     encryptedPass = cipher.encrypt(password.encode())
+    #print("gotten password and user\n")
 
     # Send the encrypted username and password to the server
     clientSocket.send(encryptedUser)
-    clientSocket.send(encryptedPass)
+    #print("sent username")
 
+    clientSocket.send(encryptedPass)
+    #print("sent password")
+
+    
     # Receive and decrypt the symmetric key from the server
     encryptedSymKey = clientSocket.recv(1024)
     privateKey = loadPrivateKey(username)
     if privateKey is None:
-        print("Error: Private key not found.")
+        #print("Error: Private key not found.")
         return
 
     symKeyCipher = PKCS1_OAEP.new(privateKey)
+    
     symKey = symKeyCipher.decrypt(encryptedSymKey)
+    #print(symKey)
 
     # Check for invalid username or password response
     if symKey == b"Invalid username or password":
@@ -153,6 +161,30 @@ def client():
         print("Authentication successful.")
         # Send an acknowledgment message
         clientSocket.send(encryptMessage("OK", symKey))
+
+        menu = decryptMessage(clientSocket.recv(1024),symKey)
+        choice = input(menu)
+
+        while choice != '0':
+            
+            match choice:
+                case '1':
+                    ''' Sub protocol 1'''
+                    pass
+                case '2':
+                    ''' sub protocol 2'''
+                    pass
+                case 1:
+                    ''' su protocol 3'''
+                    pass
+                case _:
+                    ''' default is break from loop and close'''
+                    break
+            menu = decryptMessage(clientSocket.recv(1024),symKey)
+            choice = input(menu)
+
+
+        #begin while loop
 
         ''' <TODO> '''
         # I have not yet worked on the main client-server interaction
