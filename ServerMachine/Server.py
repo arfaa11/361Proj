@@ -59,8 +59,8 @@ def authenticateClient(connectionSocket):
     """
     try:
         # Receive the encrypted username and password from the client
-        encryptedUser = connectionSocket.recv(1024)
-        encryptedPass = connectionSocket.recv(1024)
+        encryptedUser = connectionSocket.recv(256)
+        encryptedPass = connectionSocket.recv(256)
 
         # Decrypt using the server's private key
         decryptor = PKCS1_OAEP.new(serverPrivKey)
@@ -310,10 +310,17 @@ def handleClient(connectionSocket):
     encryptor = PKCS1_OAEP.new(clientPubKey)
     encryptedSymKey = encryptor.encrypt(symKey)
     connectionSocket.send(encryptedSymKey)
-
+    check = recvDecryptedMsg(connectionSocket, symKey)
+   
+    if check == "OK":
+        #handleEmailOperations(connectionSocket, username, symKey)
+        pass
     ''' <TODO> '''
     # We will add code here when we are done with the email subprotocol
-    handleEmailOperations(connectionSocket, username, symKey)
+    
+    
+    
+    #handleEmailOperations(connectionSocket, username, symKey)
 
     
     
