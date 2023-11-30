@@ -57,14 +57,18 @@ def authenticateClient(connectionSocket):
     Return:
         - str: The username of the authenticated client or None if authentication fails.
     """
+    print("Begin authentication")
+
     try:
         # Receive the encrypted username and password from the client
-        encryptedUser = connectionSocket.recv(1024)
-        encryptedPass = connectionSocket.recv(1024)
+        encryptedUser = connectionSocket.recv(256)
+        encryptedPass = connectionSocket.recv(256)
+        print(encryptedUser)
 
         # Decrypt using the server's private key
         decryptor = PKCS1_OAEP.new(serverPrivKey)
         username = decryptor.decrypt(encryptedUser).decode()
+        print("Username gotten")
         password = decryptor.decrypt(encryptedPass).decode()
 
         # Check if the username and password are valid
@@ -74,6 +78,8 @@ def authenticateClient(connectionSocket):
         else:
             print(f"Authentication failed for {username}")
             return None
+
+    
 
     except Exception as e:
         print(f"Authentication error: {e}")
@@ -311,14 +317,12 @@ def handleClient(connectionSocket):
     encryptedSymKey = encryptor.encrypt(symKey)
     connectionSocket.send(encryptedSymKey)
 
+    check = recvDecryptedMsg(connectionSocket,symKey)
     ''' <TODO> '''
-    # We will add code here when we are done with the email subprotocol
-    handleEmailOperations(connectionSocket, username, symKey)
 
-    
-    
-        
-    
+    # We will add code here when we are done with the email subprotocol
+    if (check == 'OK'):
+        handleEmailOperations(connectionSocket, username, symKey)
      
     # Also, as I said in the client program, let me know if there are any 
     # changes you guys want made, or if there's somethign you guys don't
@@ -334,7 +338,7 @@ def handleClient(connectionSocket):
 #------------------------------------------------------------------------------
 def server():
     serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    serverSocket.bind(('localhost', 13000))
+    serverSocket.bind(('localhost', 13001))
     serverSocket.listen(5)
 
     print("Server is ready to accept connections")

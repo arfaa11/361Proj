@@ -102,6 +102,7 @@ def makeEmail(source,message, title, dest):
     if len(message) <= 1000000:
         return (f"\nFrom: {source}\nTo: {dest}\nTitle: {title}"
                  "\nContent Length: {length}\nContent:\n{message}")
+    return
 
 #------------------------------------------------------------------------------
 # Main client function
@@ -113,7 +114,7 @@ def client():
     """
     # Server IP address and port number
     serverIP = input("Enter the server IP or name: ")
-    serverPort = 13000
+    serverPort = 13001
 
     # Create a socket to connect to the server
     clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -128,11 +129,16 @@ def client():
     cipher = PKCS1_OAEP.new(serverPubKey)
     encryptedUser = cipher.encrypt(username.encode())
     encryptedPass = cipher.encrypt(password.encode())
+    #print("gotten password and user\n")
 
     # Send the encrypted username and password to the server
     clientSocket.send(encryptedUser)
-    clientSocket.send(encryptedPass)
+    #print("sent username")
 
+    clientSocket.send(encryptedPass)
+    #print("sent password")
+
+    
     # Receive and decrypt the symmetric key from the server
     encryptedSymKey = clientSocket.recv(1024)
     privateKey = loadPrivateKey(username)
@@ -142,6 +148,7 @@ def client():
 
     symKeyCipher = PKCS1_OAEP.new(privateKey)
     symKey = symKeyCipher.decrypt(encryptedSymKey)
+    #print(symKey)
 
     # Check for invalid username or password response
     if symKey == b"Invalid username or password":
@@ -153,6 +160,10 @@ def client():
         print("Authentication successful.")
         # Send an acknowledgment message
         clientSocket.send(encryptMessage("OK", symKey))
+
+        menu = decryptMessage(clientSocket.recv(1024),symKey)
+        print(menu)
+        #begin while loop
 
         ''' <TODO> '''
         # I have not yet worked on the main client-server interaction
