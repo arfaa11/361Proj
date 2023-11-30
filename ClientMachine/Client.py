@@ -169,13 +169,16 @@ def client():
             
             match choice:
                 case '1':
+                    print("Begin subprotocol 1")
                     ''' Sub protocol 1'''
                     pass
                 case '2':
+                    print("Begin subprotocol 2")
                     ''' sub protocol 2'''
                     pass
-                case 1:
-                    ''' su protocol 3'''
+                case '3':
+                    print("Begin subprotocol 3")
+                    ''' sub protocol 3'''
                     pass
                 case _:
                     ''' default is break from loop and close'''
