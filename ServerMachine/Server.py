@@ -68,7 +68,6 @@ def authenticateClient(connectionSocket):
         # Receive the encrypted username and password from the client
         encryptedUser = connectionSocket.recv(256)
         encryptedPass = connectionSocket.recv(256)
-        print(encryptedUser)
 
         # Decrypt using the server's private key
         decryptor = PKCS1_OAEP.new(serverPrivKey)
@@ -138,16 +137,16 @@ def handleEmailOperations(connectionSocket, username, symKey):
     choice = getChoice(connectionSocket,symKey)
     while (choice):
         match choice:
-            case 1:
+            case '1':
                 print("the sending email subprotocol")
                 sendEmailProtocol(connectionSocket,symKey, username)
-            case 2:
+            case '2':
                 print("the viewing inbox subprotocol")
                 viewInboxProtocol(connectionSocket,symKey, username)
-            case 3:
+            case '3':
                 print("the viewing email subprotocol")
                 viewEmailProtocol(connectionSocket,symKey, username)
-            case 4:
+            case '4':
                 print("connection termination subprotocol")
                 connectionSocket.close()
                 return
@@ -227,6 +226,8 @@ def sendEmailProtocol(connectionSocket,symKey, username):
                 
                 email = recvDecryptedMsg(connectionSocket, symKey)
                 messageSize = len(email)
+
+                #  send message to destinations...
             case _:
                 pass
         
@@ -324,12 +325,12 @@ def getChoice(connectionSocket,symKey):
     '''
     menumessage = ("\nSelect the operation:\n\t1) Create and send and email"
                 "\n\t2) Display the inbox list\n\t3) Display the email contents"
-                "\n\t4) Terminate the connection\nchoice:")
+                "\n\t4) Terminate the connection\n\tchoice: ")
     
     sendEncryptedMsg(connectionSocket, menumessage, symKey)
     choice = recvDecryptedMsg(connectionSocket, symKey)
     
-    return int(choice)
+    return choice
     
     
 
@@ -358,13 +359,24 @@ def handleClient(connectionSocket):
     encryptor = PKCS1_OAEP.new(clientPubKey)
     encryptedSymKey = encryptor.encrypt(symKey)
     connectionSocket.send(encryptedSymKey)
+    check = recvDecryptedMsg(connectionSocket, symKey)
+   
+    if check == "OK":
+        handleEmailOperations(connectionSocket, username, symKey)
 
-    check = recvDecryptedMsg(connectionSocket,symKey)
+        pass
     ''' <TODO> '''
 
     # We will add code here when we are done with the email subprotocol
-    if (check == 'OK'):
-        handleEmailOperations(connectionSocket, username, symKey)
+    
+    
+    
+    #handleEmailOperations(connectionSocket, username, symKey)
+
+    
+    
+        
+    
      
     # Also, as I said in the client program, let me know if there are any 
     # changes you guys want made, or if there's somethign you guys don't
@@ -380,7 +392,7 @@ def handleClient(connectionSocket):
 #------------------------------------------------------------------------------
 def server():
     serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    serverSocket.bind(('localhost', 13001))
+    serverSocket.bind(('localhost', 13000))
     serverSocket.listen(5)
 
     print("Server is ready to accept connections")

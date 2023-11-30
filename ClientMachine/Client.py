@@ -99,7 +99,7 @@ def makeEmail(source,message, title, dest):
     '''
     dest  = dest.join(";")
     length = len(message)
-    if len(message) <= 1000000:
+    if length <= 1000000:
         return (f"\nFrom: {source}\nTo: {dest}\nTitle: {title}"
                  "\nContent Length: {length}\nContent:\n{message}")
     return
@@ -114,7 +114,7 @@ def client():
     """
     # Server IP address and port number
     serverIP = input("Enter the server IP or name: ")
-    serverPort = 13001
+    serverPort = 13000
 
     # Create a socket to connect to the server
     clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -143,10 +143,11 @@ def client():
     encryptedSymKey = clientSocket.recv(1024)
     privateKey = loadPrivateKey(username)
     if privateKey is None:
-        print("Error: Private key not found.")
+        #print("Error: Private key not found.")
         return
 
     symKeyCipher = PKCS1_OAEP.new(privateKey)
+    
     symKey = symKeyCipher.decrypt(encryptedSymKey)
     #print(symKey)
 
@@ -162,7 +163,30 @@ def client():
         clientSocket.send(encryptMessage("OK", symKey))
 
         menu = decryptMessage(clientSocket.recv(1024),symKey)
-        print(menu)
+        choice = input(menu)
+
+        while choice != '0':
+            
+            match choice:
+                case '1':
+                    print("Begin subprotocol 1")
+                    ''' Sub protocol 1'''
+                    pass
+                case '2':
+                    print("Begin subprotocol 2")
+                    ''' sub protocol 2'''
+                    pass
+                case '3':
+                    print("Begin subprotocol 3")
+                    ''' sub protocol 3'''
+                    pass
+                case _:
+                    ''' default is break from loop and close'''
+                    break
+            menu = decryptMessage(clientSocket.recv(1024),symKey)
+            choice = input(menu)
+
+
         #begin while loop
 
         ''' <TODO> '''
