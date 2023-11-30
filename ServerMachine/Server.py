@@ -38,6 +38,11 @@ with open('user_pass.json', 'r') as user_passFile:
 # Create a dictionary to store client public keys
 #------------------------------------------------------------------------------
 
+#------------------------------------------------------------------------------
+# Email Index Database Structure# {index<int>: [destination<string>, timeanddate<string>, title<string>, content_length<int>,emailcontents<string>/filename<string>]}   
+
+# Format for each user's json fileName:- <username>.json
+
 # Create a dictionary to hold each client's public RSA key.
 clientPubKeys = {}
 for username in user_passData:
@@ -120,7 +125,7 @@ def handleEmailOperations(connectionSocket, username, symKey):
     Parameters:
         - connectionSocket (socket): The socket connected to the client.
         - username (str): The authenticated username of the client.
-    Modification by Subomi: added encryptedSymKey to function parameters
+    Modification by Subomi: added symKey to function parameters
     Return:
         - ---
     """
@@ -154,11 +159,12 @@ def handleEmailOperations(connectionSocket, username, symKey):
 
 def sendEmailProtocol(connectionSocket,symKey, username):
     '''
+    Description
     Function to handle email sending protocol
     inputs:
-        connectionSocket: 
-        encryptedSymKey
-        username:
+        connectionSocket (socket): The socket connected to the client.
+        symKey (bytes): The symmetric key for AES decryption.
+        username (str): The authenticated username of the client.
     Ouput:
         nothing, throws exceptions if error is encountered
     '''
@@ -233,24 +239,25 @@ def sendEmailProtocol(connectionSocket,symKey, username):
 
 def viewInboxProtocol(connectionSocket,symKey, username):
     '''
+    Desciption:
     Function to handle email sending protocol
     inputs:
-        connectionSocket: 
-        encryptedSymKey:
-        username:
+        connectionSocket (socket): The socket connected to the client.
+        symKey (bytes): The symmetric key for AES decryption.
+        username (str): The authenticated username of the client.
     Ouput:
         nothing, throws exceptions if error is encountered
     '''
-    '''Get data from json file'''
+    #Get data from json file
 
-    ''' Turn data to string text'''
+    #Turn data to string text
 
     sendMessage = f"Index\t\t\tFrom\t\tDateTime\t\t\t\t\tTitle"
                         
                         
     # Read database from json file
     fOpen = open({username}.json,"r")
-    '''Format for each user's json file:- <username>.json'''
+    #Format for each user's json file:- <username>.json
     
     
     try:
@@ -262,13 +269,47 @@ def viewInboxProtocol(connectionSocket,symKey, username):
         
     for item,x in dBase, len(dBase):
         sendMessage += f"\n{x}\t\t\t{dBase[item]['From']}\t\t{dBase[item]['DateTime']}\t\t\t\t\t{dBase[item]['Title']}"
-    
+        
     sendMessage += "\n"
     sendEncryptedMsg(connectionSocket, sendMessage, symKey)  
 
     return
 
 def viewEmailProtocol(connectionSocket,symKey, username):
+    '''
+    Description:
+
+    inputs:
+        connectionSocket (socket): The socket connected to the client.
+        symKey (bytes): The symmetric key for AES decryption.
+        username (str): The authenticated username of the client.
+    Ouput:
+        nothing, throws exceptions if error is encountered
+    '''
+    try:
+        message = "\nEnter the email index you wish to view: "  
+        sendEncryptedMsg(connectionSocket, message, symKey)
+        
+        index = recvDecryptedMsg(connectionSocket, symKey)
+        
+        try:
+            fOpen = open({username}.json,"r")
+            dBase = json.load(fOpen)
+            fOpen.close()  
+            # Email Index Database Structure
+            # {index<int>: [destination<string>, timeanddate<string>, title<string>, content_length<int>,emailcontents<string>/filename<string>]}   
+            retEmail = (f"From: {username}\nTo: {dBase[index][0]}\nTime and Date Received: {dBase[index][1]}"
+                         f"\nTitle: {dBase[index][2]}\nContent Length: {dBase[index][3]}\nContents:\n{dBase[index][4]}")      
+            
+            #!!!currently arbitrary positions in dBase    
+
+            sendEncryptedMsg(connectionSocket, retEmail, symKey) # send email info back to client       
+        except Exception as e:
+            sendEncryptedMsg(connectionSocket, "Email Index not Found", symKey) # Notify client. email index not found
+            print(e)
+            return
+    except Exception as e:
+        print(e)
 
     return
 
@@ -277,7 +318,8 @@ def getChoice(connectionSocket,symKey):
     '''
     Get choice from user
     Input:
-
+            connectionSocket (socket): The socket connected to the client.
+            symKey (bytes): The symmetric key for AES decryption.
     Output:
     '''
     menumessage = ("\nSelect the operation:\n\t1) Create and send and email"
