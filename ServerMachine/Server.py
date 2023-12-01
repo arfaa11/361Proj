@@ -167,12 +167,10 @@ def processAndStoreEmail(email, senderUsername):
         - None
     """
     # Receive content length first
-    encryptedContentLength = connectionSocket.recv(1024)
-    contentLength = int(recvDecryptedMsg(connectionSocket, encryptedContentLength))
+    contentLength = int(recvDecryptedMsg(connectionSocket, symKey))
 
     # Receive the rest of the email information
-    encryptedEmailInfo = connectionSocket.recv(1024)
-    emailInfo = json.loads(recvDecryptedMsg(connectionSocket, encryptedEmailInfo))
+    emailInfo = json.loads(recvDecryptedMsg(connectionSocket, symKey))
 
     # Adding the current date and time to the email
     emailInfo['Time and Date'] = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -340,7 +338,7 @@ def handleEmailOperations(connectionSocket, username, symKey):
         match choice:
             case '1':
             # Handling email creation and sending  
-                processAndStoreEmail(connectionSocket, username, symKey)
+                processAndStoreEmail(connectionSocket, username)
             case '2':
             # Handling inbox listing
                 displayInboxList(connectionSocket, username, symKey)
