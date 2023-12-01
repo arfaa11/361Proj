@@ -305,21 +305,6 @@ def client():
             # Handle user choice
             match choice:
                 case '1':
-<<<<<<< HEAD
-                    print("Begin subprotocol 1")
-                    ''' Sub protocol 1'''
-                    pass
-                case '2':
-                    print("Begin subprotocol 2")
-                    ''' sub protocol 2'''
-                    pass
-                case '3':
-                    print("Begin subprotocol 3")
-                    ''' sub protocol 3'''
-                    pass
-                case _:
-                    ''' default is break from loop and close'''
-=======
                     sendEmail(clientSocket, symKey, username)
                 case '2':
                     displayInboxList(clientSocket, symKey)
@@ -327,10 +312,8 @@ def client():
                     displayEmailContents(clientSocket, symKey)
                 case '4':
                     print("The connection is terminated with the server.")
->>>>>>> 5148c40c0451b294a74a222caaebdf905bc1fea5
-                    break
                 case _:
-                    print("Invalid choice. Please try again.")
+                    print("Invalid input. try again")
 
         # Close the client socket when done
         clientSocket.close()

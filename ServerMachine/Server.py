@@ -8,7 +8,6 @@ Assignment: Secure Mail Transfer Project
 Program name: Server.py
 Program purpose: <TODO>
 '''
-
 import json
 import socket
 import os
@@ -19,41 +18,35 @@ from Crypto.Cipher import PKCS1_OAEP, AES
 from Crypto.Util.Padding import pad, unpad
 from Crypto.Random import get_random_bytes
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Load server keys and user credentials
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
-# Load the server's private RSA key from a file.
-# Will be used to decrypt messages that are encrypted with the server's 
-# public key.
+# Load the server's private RSA key from a file
 with open('server_private.pem', 'rb') as keyFile:
     serverPrivKey = RSA.import_key(keyFile.read())
 
-# Load the usernames and passwords from user_pass.json.
-# Will be used for authenticating clients.
+# Load the usernames and passwords for client authentication from a JSON file
 with open('user_pass.json', 'r') as user_passFile:
     user_passData = json.load(user_passFile)
-
-#------------------------------------------------------------------------------
+    
+# ------------------------------------------------------------------------------
 # Create a dictionary to store client public keys
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
-#------------------------------------------------------------------------------
-# Email Index Database Structure# {index<int>: [destination<string>, timeanddate<string>, title<string>, content_length<int>,emailcontents<string>/filename<string>]}   
-
-# Format for each user's json fileName:- <username>.json
-
-# Create a dictionary to hold each client's public RSA key.
+# Initializing a dictionary to hold public RSA keys of all clients
 clientPubKeys = {}
 for username in user_passData:
+    
+    # Load and store each client's public RSA key
     with open(f'{username}_public.pem', 'rb') as pubKeyFile:
         clientPubKeys[username] = RSA.import_key(pubKeyFile.read())
 
-
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Helper functions for server
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
+# Function to authenticate clients
 def authenticateClient(connectionSocket):
     """
     Purpose: Authenticate the client using the received username and password.
@@ -62,36 +55,39 @@ def authenticateClient(connectionSocket):
     Return:
         - str: The username of the authenticated client or None if authentication fails.
     """
-    print("Begin authentication")
-
     try:
-        # Receive the encrypted username and password from the client
+        # Receiving encrypted username and password from the client
+        # Ensure to receive exactly 256 bytes for each
         encryptedUser = connectionSocket.recv(256)
         encryptedPass = connectionSocket.recv(256)
 
-        # Decrypt using the server's private key
+        # Decrypting the received credentials using the server's private key
         decryptor = PKCS1_OAEP.new(serverPrivKey)
-        username = decryptor.decrypt(encryptedUser).decode()
-        print("Username gotten")
-        password = decryptor.decrypt(encryptedPass).decode()
+        username = decryptor.decrypt(encryptedUser).decode('ascii')
+        password = decryptor.decrypt(encryptedPass).decode('ascii')
 
-        # Check if the username and password are valid
+        # Validating the decrypted credentials
         if username in user_passData and user_passData[username] == password:
-            print(f"Authentication successful for {username}")
-            return username
+            # Handling valid credentials
+            print(f"Connection Accepted and Symmetric Key Generated for client: {username}")
+            # return username, True tuple
+            return username, True
+        
         else:
-            print(f"Authentication failed for {username}")
-            return None
-
+            # Handling invalid credentials
+            print(f"The received client information: {username} is invalid (Connection Terminated).")
+            # return None, False tuple
+            return None, False
     
-
     except Exception as e:
+        # Handling errors in authentication
         print(f"Authentication error: {e}")
-        return None
-
+        # return None, False tuple
+        return None, False
+    
 def sendEncryptedMsg(connectionSocket, message, symKey):
     """
-    Purpose: Send an encrypted message to the client.
+    Purpose: Encrypt and send a message to the client.
     Parameters:
         - connectionSocket (socket): The socket connected to the client.
         - message (str): The message to be sent.
@@ -99,324 +95,236 @@ def sendEncryptedMsg(connectionSocket, message, symKey):
     Return:
         - None
     """
+    # Use AES in ECB mode to encrypt the message
     cipher = AES.new(symKey, AES.MODE_ECB)
+    # Pad and encrypt the message, and encode it to bytes
     encryptedMsg = cipher.encrypt(pad(message.encode('ascii'), AES.block_size))
+    # Send the encrypted message to the client
     connectionSocket.send(encryptedMsg)
-    return
 
 def recvDecryptedMsg(connectionSocket, symKey):
     """
-    Purpose: Receive an encrypted message from the client and decrypt it. 
+    Purpose: Receive and decrypt an encrypted message from the client.
     Parameters:
         - connectionSocket (socket): The socket connected to the client.
         - symKey (bytes): The symmetric key for AES decryption.
     Returns:
-        str: The decrypted message.
+        - str: The decrypted message.
     """
+    # Receive the encrypted message from the client
     encryptedMsg = connectionSocket.recv(1024)
+    # Use AES in ECB mode to decrypt the message
     cipher = AES.new(symKey, AES.MODE_ECB)
+    # Decrypt the message and unpad it
     decryptedMsg = unpad(cipher.decrypt(encryptedMsg), AES.block_size)
+    # Decode the decrypted message to ASCII and return
     return decryptedMsg.decode('ascii')
 
-def handleEmailOperations(connectionSocket, username, symKey):
+def processAndStoreEmail(email, senderUsername):
     """
-    Purpose: Function to handle email related operations with the client.
+    Purpose: Process the received email JSON and store it in the recipient's directory.
+    Parameters:
+        - email (dict): The email information as a dictionary.
+        - senderUsername (str): The username of the email sender.
+    Return:
+        - None
+    """
+    # Adding the current date and time to the email
+    email['Time and Date'] = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # Processing each recipient in the email
+    recipients = email['To'].split(';')
+
+    for recipient in recipients:
+        # Creating a directory for the recipient if it does not exist
+        recipientDir = os.path.join('ClientFolders', recipient)
+        if not os.path.exists(recipientDir):
+            os.mkdir(recipientDir)
+
+        # Saving the email as a JSON file in the recipient's directory
+        emailFilename = f"{senderUsername}_{email['Title'].replace(' ', '_')}.json"
+        with open(os.path.join(recipientDir, emailFilename), 'w') as emailFile:
+            json.dump(email, emailFile)
+
+        # Printing a success message
+        print(f"Email from {senderUsername} to {recipient} stored successfully.")
+
+def displayInboxList(connectionSocket, username, symKey):
+    """
+    Purpose: Send the list of emails in the user's inbox to the client.
     Parameters:
         - connectionSocket (socket): The socket connected to the client.
-        - username (str): The authenticated username of the client.
-    Modification by Subomi: added symKey to function parameters
+        - username (str): The username of the client whose inbox is being accessed.
+        - symKey (bytes): The symmetric key for AES encryption.
     Return:
-        - ---
+        - None
     """
-    ''' <TODO> '''
-    # Haven't worked on this yet, we will do this once everything else is
-    # in perfect working order
+    # Locating the inbox directory of the client
+    inboxDir = os.path.join('ClientFolders', username)
 
-    
-    
-    choice = getChoice(connectionSocket,symKey)
-    while (choice):
-        match choice:
-            case '1':
-                print("the sending email subprotocol")
-                sendEmailProtocol(connectionSocket,symKey, username)
-            case '2':
-                print("the viewing inbox subprotocol")
-                viewInboxProtocol(connectionSocket,symKey, username)
-            case '3':
-                print("the viewing email subprotocol")
-                viewEmailProtocol(connectionSocket,symKey, username)
-            case '4':
-                print("connection termination subprotocol")
-                connectionSocket.close()
-                return
-            case _:
-                break
-        choice = getChoice(connectionSocket,symKey)
+    # Listing all files (emails) in the inbox directory
+    inboxList = os.listdir(inboxDir) if os.path.exists(inboxDir) else []
+    inboxListStr = '\n'.join(inboxList)
 
-    return
+    # Sending the list of emails to the client
+    sendEncryptedMsg(connectionSocket, inboxListStr, symKey)
 
-def sendEmailProtocol(connectionSocket,symKey, username):
-    '''
-    Description
-    Function to handle email sending protocol
-    inputs:
-        connectionSocket (socket): The socket connected to the client.
-        symKey (bytes): The symmetric key for AES decryption.
-        username (str): The authenticated username of the client.
-    Ouput:
-        nothing, throws exceptions if error is encountered
-    '''
-    
+def displayEmailContents(connectionSocket, username, symKey):
+    """
+    Purpose: Send the contents of a specific email to the client.
+    Parameters:
+        - connectionSocket (socket): The socket connected to the client.
+        - username (str): The username of the client requesting the email content.
+        - symKey (bytes): The symmetric key for AES encryption.
+    Return:
+        - None
+    """
+    # Prompting the client to enter the index of the email they wish to view
+    sendEncryptedMsg(connectionSocket, "Enter email index:", symKey)
+    emailIndex = recvDecryptedMsg(connectionSocket, symKey)
+
     try:
-        
-        message = "Send the email"  
-        # potential conflict here (conflicting spec instructions), check for server logic error in client.py
-        sendEncryptedMsg(connectionSocket, message, symKey)
-        
-        # Get destinations
-        message = "\nEnter destinations (separated by ;): "  
-        sendEncryptedMsg(connectionSocket, message, symKey)
-        
-        dest = recvDecryptedMsg(connectionSocket, symKey)
-        destS = dest.split(";")  #split into array of destination  
+        # Opening and reading the requested email file
+        emailFilename = os.path.join('ClientFolders', username, emailIndex)
+        with open(emailFilename, 'r') as emailFile:
+            emailContent = json.load(emailFile)
+            emailContentStr = json.dumps(emailContent, indent=4)
 
-        # Get Email Title
-        message = "\nEnter Title: "  
-        sendEncryptedMsg(connectionSocket, message, symKey)
-        
-        title = recvDecryptedMsg(connectionSocket, symKey)
-        
-        # Get message
-        message = "\nWould you like to load contents from a file?  (Y/N): "  
-        sendEncryptedMsg(connectionSocket, message, symKey)
-        
-        choice = recvDecryptedMsg(connectionSocket, symKey)
-        messageSize = 0
-        '''TODO: Dump email contents to json file'''
-        match choice.upper():
-            case 'Y':
-                ''' do some file transfer operations'''
-                message = "\nEnter filename: "  
-                sendEncryptedMsg(connectionSocket, message, symKey)
+            # Sending the email content to the client
+            sendEncryptedMsg(connectionSocket, emailContentStr, symKey)
 
-                fName = recvDecryptedMsg(connectionSocket, symKey)
-                fName, fSize = fName.split(",")
-                fSize = int(fSize)      # don't forget to get client to send file name and file size
-                
-                messageSize = fSize
-                '''receive file'''
-                with open(f'{fName}', 'rb') as fOut:
-                    fOut = open(f"ServerReceive/{fName}", "wb")
-                    data = recvDecryptedMsg(connectionSocket, symKey)
-                    datalen = len(data)
-                    
-                    
-                    while datalen < fSize:
-                        if not data: # end loop if there's no more data
-                            break
-                        else:
-                            fOut.write(data)
-                            data = connectionSocket.recv(2048)
-                            datalen += len(data)
-                    '''Send message: The message is sent to the server? '''
-            case 'N':
-                message = "\nEnter message contents: "  
-                sendEncryptedMsg(connectionSocket, message, symKey)
-                
-                email = recvDecryptedMsg(connectionSocket, symKey)
-                messageSize = len(email)
-
-                #  send message to destinations...
-            case _:
-                pass
-        
-
-        print(f"An email from {username} is sent to {dest}, has content length of {messageSize}.")
     except Exception as e:
-        print("Error occured while receiving email", e)
-        return
-    return
+        # Handling errors in reading the email file
+        sendEncryptedMsg(connectionSocket, f"Error reading email: {e}", symKey)
 
-def viewInboxProtocol(connectionSocket,symKey, username):
-    '''
-    Desciption:
-    Function to handle email sending protocol
-    inputs:
-        connectionSocket (socket): The socket connected to the client.
-        symKey (bytes): The symmetric key for AES decryption.
-        username (str): The authenticated username of the client.
-    Ouput:
-        nothing, throws exceptions if error is encountered
-    '''
-    #Get data from json file
-
-    #Turn data to string text
-
-    sendMessage = f"Index\t\t\tFrom\t\tDateTime\t\t\t\t\tTitle"
-                        
-                        
-    # Read database from json file
-    fOpen = open({username}.json,"r")
-    #Format for each user's json file:- <username>.json
-    
-    
-    try:
-        dBase = json.load(fOpen)
-        fOpen.close()                            
-    except Exception as e:
-        print(e)
-                                
-        
-    for item,x in dBase, len(dBase):
-        sendMessage += f"\n{x}\t\t\t{dBase[item]['From']}\t\t{dBase[item]['DateTime']}\t\t\t\t\t{dBase[item]['Title']}"
-        
-    sendMessage += "\n"
-    sendEncryptedMsg(connectionSocket, sendMessage, symKey)  
-
-    return
-
-def viewEmailProtocol(connectionSocket,symKey, username):
-    '''
-    Description:
-
-    inputs:
-        connectionSocket (socket): The socket connected to the client.
-        symKey (bytes): The symmetric key for AES decryption.
-        username (str): The authenticated username of the client.
-    Ouput:
-        nothing, throws exceptions if error is encountered
-    '''
-    try:
-        message = "\nEnter the email index you wish to view: "  
-        sendEncryptedMsg(connectionSocket, message, symKey)
-        
-        index = recvDecryptedMsg(connectionSocket, symKey)
-        
-        try:
-            fOpen = open({username}.json,"r")
-            dBase = json.load(fOpen)
-            fOpen.close()  
-            # Email Index Database Structure
-            # {index<int>: [destination<string>, timeanddate<string>, title<string>, content_length<int>,emailcontents<string>/filename<string>]}   
-            retEmail = (f"From: {username}\nTo: {dBase[index][0]}\nTime and Date Received: {dBase[index][1]}"
-                         f"\nTitle: {dBase[index][2]}\nContent Length: {dBase[index][3]}\nContents:\n{dBase[index][4]}")      
-            
-            #!!!currently arbitrary positions in dBase    
-
-            sendEncryptedMsg(connectionSocket, retEmail, symKey) # send email info back to client       
-        except Exception as e:
-            sendEncryptedMsg(connectionSocket, "Email Index not Found", symKey) # Notify client. email index not found
-            print(e)
-            return
-    except Exception as e:
-        print(e)
-
-    return
-
-
-def getChoice(connectionSocket,symKey):
-    '''
-    Get choice from user
-    Input:
-            connectionSocket (socket): The socket connected to the client.
-            symKey (bytes): The symmetric key for AES decryption.
-    Output:
-    '''
+def getChoice(connectionSocket, symKey):
+    """
+    Purpose: Get the client's choice of email operation.
+    Parameters:
+        - connectionSocket (socket): The socket connected to the client.
+        - symKey (bytes): The symmetric key for AES encryption.
+    Return:
+        - str: The client's choice of email operation.
+        """
+    # Creating the email operation menu
     menumessage = ("\nSelect the operation:\n\t1) Create and send and email"
                 "\n\t2) Display the inbox list\n\t3) Display the email contents"
                 "\n\t4) Terminate the connection\n\tchoice: ")
     
+    # Sending the encrypted menu to the client
     sendEncryptedMsg(connectionSocket, menumessage, symKey)
+    
+    # Receiving the client's choice
     choice = recvDecryptedMsg(connectionSocket, symKey)
     
+    # Return the client's choice
     return choice
+
+def handleEmailOperations(connectionSocket, username, symKey):
+    """
+    Purpose: Handle various email-related operations based on client's choice.
+    Parameters:
+        - connectionSocket (socket): The socket connected to the client.
+        - username (str): The authenticated username of the client.
+        - symKey (bytes): The symmetric key for AES encryption/decryption.
+    Return:
+        - None
+    """
+    # Presenting the email operation menu to the client and getting the choice
+    choice = getChoice(connectionSocket, symKey)
     
-    
+    # Handling the client's choice
+    match choice:
+        case '1':
+            # Handling email creation and sending
+            sendEncryptedMsg(connectionSocket, "Send the email details", symKey)
+            email_json = recvDecryptedMsg(connectionSocket, symKey)
+            email = json.loads(email_json)
+            processAndStoreEmail(email, username)
+        case '2':
+            # Handling inbox listing
+            displayInboxList(connectionSocket, username, symKey)
+        case '3':
+            # Handling displaying email contents
+            displayEmailContents(connectionSocket, username, symKey)
+        case '4':
+            # Handling connection termination
+            print(f"Terminating connection with {username}")
+        case _:
+            # Handling invalid choices
+            sendEncryptedMsg(connectionSocket, "Invalid choice, please try again.", symKey)
 
 def handleClient(connectionSocket):
     """
-    Purpose: Handle the entire lifecycle of a client connection including authentication,
-             symmetric key exchange, and email operations.
+    Purpose: Manage the lifecycle of a client connection including authentication and email operations.
     Parameters:
         - connectionSocket (socket): The socket connected to the client.
-    Return: 
+    Return:
         - None
     """
-    # Authenticate the client
-    username = authenticateClient(connectionSocket)
-    if username is None:
-        # Send a message indicating invalid credentials and close the connection
-        connectionSocket.send(b"Invalid username or password")
+    # Authenticating the client
+    username, auth_success = authenticateClient(connectionSocket)
+
+    # Check if authentication was successful
+    if not auth_success:
+        # Sending a failure message to the client and closing the connection
+        connectionSocket.send(b"FAILURE")
         connectionSocket.close()
         return
 
-    # Generate a symmetric AES key for encrypted communication with the client
-    symKey = get_random_bytes(16)
-    
-    # Encrypt the symmetric key with the client's public RSA key and send it
+    # Sending a success message to the client
+    connectionSocket.send(b"SUCCESS")
+
+    # Generating a symmetric AES key for encrypted communication
+    symKey = get_random_bytes(32)
+
+    # Encrypting the symmetric key with the client's public RSA key and sending it
     clientPubKey = clientPubKeys[username]
     encryptor = PKCS1_OAEP.new(clientPubKey)
     encryptedSymKey = encryptor.encrypt(symKey)
     connectionSocket.send(encryptedSymKey)
-    check = recvDecryptedMsg(connectionSocket, symKey)
-   
-    if check == "OK":
-        handleEmailOperations(connectionSocket, username, symKey)
 
-        pass
-    ''' <TODO> '''
+    # Check if 'OK' received from client
+    okResponse = recvDecryptedMsg(connectionSocket, symKey)
+    if okResponse != "OK":
+        print("Error: Did not receive OK from client.")
+        return
 
-    # We will add code here when we are done with the email subprotocol
-    
-    
-    
-    #handleEmailOperations(connectionSocket, username, symKey)
+    # Handling email operations
+    handleEmailOperations(connectionSocket, username, symKey)
 
-    
-    
-        
-    
-     
-    # Also, as I said in the client program, let me know if there are any 
-    # changes you guys want made, or if there's somethign you guys don't
-    # understand, and I will do my best to explain it, and we can implement
-    # any changes, and all things we have to add from here on out together
-
-    # Close the connection socket
+    # Closing the connection socket after operations are complete
     connectionSocket.close()
-    return
 
-#------------------------------------------------------------------------------
-# Main server function
-#------------------------------------------------------------------------------
+# Main function to start and run the server
 def server():
+    """
+    Purpose: Initialize and run the email server, listening for client connections.
+    Return:
+        - None
+    """
+    # Creating a TCP socket and binding it to a port
     serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     serverSocket.bind(('localhost', 13000))
     serverSocket.listen(5)
 
+    # Server is ready and waiting for connections
     print("Server is ready to accept connections")
 
     while True:
-        connectionSocket, addr = serverSocket.accept()  # Accepting a new connection
+        # Accepting a new connection from a client
+        connectionSocket, addr = serverSocket.accept()
         print(f"Accepted connection from {addr}")
         
-        # Fork a new process
+        # Forking a new process for each client connection
         pid = os.fork()
-        if pid == 0:  # Child process
-            # Close the listening socket in the child process
-            serverSocket.close()  
-            # Handle the client using the connection socket
-            handleClient(connectionSocket)  
-            sys.exit(0)
-        else:
-            # Close the connection socket in the parent process
-            connectionSocket.close()  
-#------------------------------------------------------------------------------
+        if pid == 0:  # In the child process
+            serverSocket.close() # Close the server socket in the child process
+            handleClient(connectionSocket) # Handle the client connection
+            sys.exit(0) # Exit the child process
+        else:  # In the parent process
+            connectionSocket.close() # Close the connection socket in the parent process
 
-
-#------------------------------------------------------------------------------
-# Run program
-#------------------------------------------------------------------------------
+# Run the server program
 if __name__ == "__main__":
     server()
