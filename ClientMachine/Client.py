@@ -8,10 +8,12 @@ Assignment: Secure Mail Transfer Project
 Program name: Client.py
 Program purpose: <TODO>
 '''
+
 #------------------------------------------------------------------------------
 # Import statements
 #------------------------------------------------------------------------------
 import socket
+import json
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP, AES
 from Crypto.Util.Padding import pad, unpad
@@ -34,7 +36,7 @@ def loadPrivateKey(username):
     except FileNotFoundError:
         print(f"Private key for {username} not found in directory")
         return None
-
+    
 def loadPublicKey(username):
     """
     Purpose: Load the client's or the server's public RSA key from a file.
@@ -50,7 +52,7 @@ def loadPublicKey(username):
     except FileNotFoundError:
         print(f"Public key for {username} not found in directory")
         return None
-
+    
 #------------------------------------------------------------------------------
 # Helper functions for client
 #------------------------------------------------------------------------------
@@ -82,27 +84,60 @@ def decryptMessage(encryptedMsg, key):
     decryptedMsg = unpad(cipher.decrypt(encryptedMsg), AES.block_size)
     return decryptedMsg.decode('ascii')
 
+def getEmailDetails():
+    # Function to get email details from the user
+    destinations = input("Enter destinations (separated by ;): ")
+    title = input("Enter title: ")
+    if len(title) > 100:
+        print("Title exceeds 100 characters. Please retry.")
+        return None, None, None
+    choice = input("Would you like to load contents from a file? (Y/N): ")
+    if choice.lower() == 'y':
+        filename = input("Enter filename: ")
+        try:
+            with open(filename, 'r') as file:
+                content = file.read()
+        except FileNotFoundError:
+            print("File not found. Please retry.")
+            return None, None, None
+    else:
+        content = input("Enter message contents: ")
+    if len(content) > 1000000:
+        print("Content exceeds 1,000,000 characters. Please retry.")
+        return None, None, None
+    return destinations, title, content
 
-#------------------------------------------------------------------------------
-# Helper functions for Email interactions
-#------------------------------------------------------------------------------
+def sendEmail(clientSocket, symKey, username):
+    # Function to send email
+    destinations, title, content = getEmailDetails()
+    if destinations and title and content:
+        email = {
+            "From": username,
+            "To": destinations,
+            "Title": title,
+            "Content Length": len(content),
+            "Content": content
+        }
+        email_json = json.dumps(email)
+        clientSocket.send(encryptMessage(email_json, symKey))
+        print("The message is sent to the server.")
+    else:
+        print("Email sending aborted.")
 
-def makeEmail(source,message, title, dest):
-    '''
-    Input: 
-        source: string
-        message: string
-        title: string
-        dest: list of strings containing destinations
-    Output:
-        return full edited message or -1 if the message is too long 
-    '''
-    dest  = dest.join(";")
-    length = len(message)
-    if length <= 1000000:
-        return (f"\nFrom: {source}\nTo: {dest}\nTitle: {title}"
-                 "\nContent Length: {length}\nContent:\n{message}")
-    return
+def displayInboxList(clientSocket, symKey):
+    # Function for displaying inbox list
+    # Request inbox list from server
+    clientSocket.send(encryptMessage("2", symKey))  # '2' represents the choice for displaying inbox
+    inboxList = decryptMessage(clientSocket.recv(1024), symKey)
+    print("Inbox List:\n", inboxList)
+
+def displayEmailContents(clientSocket, symKey):
+    # Function to display the contents of a specific email
+    # Request specific email content from server
+    emailIndex = input("Enter the email index you wish to view: ")
+    clientSocket.send(encryptMessage(emailIndex, symKey))
+    emailContent = decryptMessage(clientSocket.recv(1024), symKey)
+    print("Email Content:\n", emailContent)
 
 #------------------------------------------------------------------------------
 # Main client function
@@ -127,75 +162,70 @@ def client():
     # Encrypt the username and password with the server's public key
     serverPubKey = loadPublicKey("server")
     cipher = PKCS1_OAEP.new(serverPubKey)
-    encryptedUser = cipher.encrypt(username.encode())
-    encryptedPass = cipher.encrypt(password.encode())
-    #print("gotten password and user\n")
+
+    # Ensure username and password are within RSA encryption limit
+    if len(username.encode('ascii')) > 245 or len(password.encode('ascii')) > 245:
+        print("Username or password too long for RSA encryption.")
+        return
+    
+    encryptedUser = cipher.encrypt(username.encode('ascii'))
+    encryptedPass = cipher.encrypt(password.encode('ascii'))
 
     # Send the encrypted username and password to the server
     clientSocket.send(encryptedUser)
-    #print("sent username")
-
     clientSocket.send(encryptedPass)
-    #print("sent password")
 
-    
     # Receive and decrypt the symmetric key from the server
+    encryptedSymKey = clientSocket.recv(1025)
     encryptedSymKey = clientSocket.recv(1024)
     privateKey = loadPrivateKey(username)
+
     if privateKey is None:
-        #print("Error: Private key not found.")
+        print("Error: Private key not found.")
         return
-
-    symKeyCipher = PKCS1_OAEP.new(privateKey)
     
+    symKeyCipher = PKCS1_OAEP.new(privateKey)
     symKey = symKeyCipher.decrypt(encryptedSymKey)
-    #print(symKey)
 
+    serverResponse = clientSocket.recv(1024)
+    serverResponse = clientSocket.recv(1024).decode('ascii')
+
+    if serverResponse == b"FAILURE":
+        print("Invalid username or password.\nTerminating.")
+        clientSocket.close()
+        return
+    
     # Check for invalid username or password response
     if symKey == b"Invalid username or password":
         print("Invalid username or password.\nTerminating.")
         clientSocket.close()
         return
-
+    
     if symKey is not None:
-        print("Authentication successful.")
-        # Send an acknowledgment message
-        clientSocket.send(encryptMessage("OK", symKey))
-
-        menu = decryptMessage(clientSocket.recv(1024),symKey)
-        choice = input(menu)
-
-        while choice != '0':
-            
-            match choice:
-                case '1':
-                    ''' Sub protocol 1'''
-                    pass
-                case '2':
-                    ''' sub protocol 2'''
-                    pass
-                case 1:
-                    ''' su protocol 3'''
-                    pass
-                case _:
-                    ''' default is break from loop and close'''
-                    break
-            menu = decryptMessage(clientSocket.recv(1024),symKey)
-            choice = input(menu)
-
-
-        #begin while loop
-
-        ''' <TODO> '''
-        # I have not yet worked on the main client-server interaction
-        # loop yet. I want to be sure that this version of the code is
-        # clear/easy to understand and track for you guys, and we will
-        # work on any changes, and all further additions together.
-
-    # Close the client socket when done
-    clientSocket.close()
+        # Start the user interaction loop
+        while True:
+            # Receive menu from server
+            menu = decryptMessage(clientSocket.recv(1024), symKey)
+            print(menu)
+            # Get user choice
+            choice = input("Enter your choice (1-4): ")
+            clientSocket.send(encryptMessage(choice, symKey))
+            # Handle user choice
+            if choice == '1':
+                sendEmail(clientSocket, symKey, username)
+            elif choice == '2':
+                displayInboxList(clientSocket, symKey)
+            elif choice == '3':
+                displayEmailContents(clientSocket, symKey)
+            elif choice == '4':
+                print("The connection is terminated with the server.")
+                break
+            else:
+                print("Invalid choice. Please try again.")
+        # Close the client socket when done
+        clientSocket.close()
+        
 #------------------------------------------------------------------------------
-
 
 #------------------------------------------------------------------------------
 # Run program
