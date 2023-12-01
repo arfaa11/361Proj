@@ -306,6 +306,9 @@ def client():
             # Handle user choice
             match choice:
                 case '1':
+                    sendEmailRequest = clientSocket.recv(1024)
+                    sendEmailRequest = decryptMessage(sendEmailRequest, symKey)
+                    print(sendEmailRequest)
                     sendEmail(clientSocket, symKey, username)
                 case '2':
                     displayInboxList(clientSocket, symKey)

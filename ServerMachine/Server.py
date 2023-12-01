@@ -231,29 +231,31 @@ def handleEmailOperations(connectionSocket, username, symKey):
         - None
     """
     # Presenting the email operation menu to the client and getting the choice
-    choice = getChoice(connectionSocket, symKey)
-    
+    #choice = getChoice(connectionSocket, symKey)
+    while True:
     # Handling the client's choice
-    match choice:
-        case '1':
-            # Handling email creation and sending
-            sendEncryptedMsg(connectionSocket, "Send the email details", symKey)
-            email_json = recvDecryptedMsg(connectionSocket, symKey)
-            email = json.loads(email_json)
-            processAndStoreEmail(email, username)
-        case '2':
+        choice = getChoice(connectionSocket, symKey)
+        match choice:
+            case '1':
+                # Handling email creation and sending
+                sendEncryptedMsg(connectionSocket, "Send the email details", symKey)
+                email_json = recvDecryptedMsg(connectionSocket, symKey)
+                email = json.loads(email_json)
+                processAndStoreEmail(email, username)
+            case '2':
             # Handling inbox listing
-            displayInboxList(connectionSocket, username, symKey)
-        case '3':
+                displayInboxList(connectionSocket, username, symKey)
+            case '3':
             # Handling displaying email contents
-            displayEmailContents(connectionSocket, username, symKey)
-        case '4':
+                displayEmailContents(connectionSocket, username, symKey)
+            case '4':
             # Handling connection termination
-            print(f"Terminating connection with {username}")
-        case _:
-            # Handling invalid choices
-            sendEncryptedMsg(connectionSocket, "Invalid choice, please try again.", symKey)
-
+                print(f"Terminating connection with {username}")
+                break
+            case _:
+                # Handling invalid choices
+                sendEncryptedMsg(connectionSocket, "Invalid choice, please try again.", symKey)
+        
 def handleClient(connectionSocket):
     """
     Purpose: Manage the lifecycle of a client connection including authentication and email operations.
