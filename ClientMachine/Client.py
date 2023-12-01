@@ -33,6 +33,7 @@ def loadPrivateKey(username):
         with open(f'{username}_private.pem', 'rb') as privKeyFile:
             privKey = RSA.import_key(privKeyFile.read())
         return privKey
+    
     except FileNotFoundError:
         print(f"Private key for {username} not found in directory")
         return None
@@ -49,6 +50,7 @@ def loadPublicKey(username):
         with open(f'{username}_public.pem', 'rb') as pubKeyFile:
             pubKey = RSA.import_key(pubKeyFile.read())
         return pubKey
+    
     except FileNotFoundError:
         print(f"Public key for {username} not found in directory")
         return None
@@ -80,6 +82,7 @@ def decryptMessage(encryptedMsg, key):
     """
     if not encryptedMsg:
         raise ValueError("The encrypted message is empty")
+    
     cipher = AES.new(key, AES.MODE_ECB)
     decryptedMsg = unpad(cipher.decrypt(encryptedMsg), AES.block_size)
     return decryptedMsg.decode('ascii')
@@ -88,28 +91,36 @@ def getEmailDetails():
     # Function to get email details from the user
     destinations = input("Enter destinations (separated by ;): ")
     title = input("Enter title: ")
+
     if len(title) > 100:
         print("Title exceeds 100 characters. Please retry.")
         return None, None, None
+    
     choice = input("Would you like to load contents from a file? (Y/N): ")
+
     if choice.lower() == 'y':
         filename = input("Enter filename: ")
         try:
             with open(filename, 'r') as file:
                 content = file.read()
+
         except FileNotFoundError:
             print("File not found. Please retry.")
             return None, None, None
+        
     else:
         content = input("Enter message contents: ")
+
     if len(content) > 1000000:
         print("Content exceeds 1,000,000 characters. Please retry.")
         return None, None, None
+    
     return destinations, title, content
 
 def sendEmail(clientSocket, symKey, username):
     # Function to send email
     destinations, title, content = getEmailDetails()
+
     if destinations and title and content:
         email = {
             "From": username,
@@ -118,6 +129,7 @@ def sendEmail(clientSocket, symKey, username):
             "Content Length": len(content),
             "Content": content
         }
+
         email_json = json.dumps(email)
         clientSocket.send(encryptMessage(email_json, symKey))
         print("The message is sent to the server.")
@@ -188,7 +200,6 @@ def client():
     symKey = symKeyCipher.decrypt(encryptedSymKey)
 
     serverResponse = clientSocket.recv(1024)
-    serverResponse = clientSocket.recv(1024).decode('ascii')
 
     if serverResponse == b"FAILURE":
         print("Invalid username or password.\nTerminating.")
@@ -201,15 +212,17 @@ def client():
         clientSocket.close()
         return
     
-    if symKey is not None:
+    if symKey is not None and serverResponse == b"SUCCESS":
         # Start the user interaction loop
         while True:
             # Receive menu from server
             menu = decryptMessage(clientSocket.recv(1024), symKey)
             print(menu)
+
             # Get user choice
             choice = input("Enter your choice (1-4): ")
             clientSocket.send(encryptMessage(choice, symKey))
+
             # Handle user choice
             if choice == '1':
                 sendEmail(clientSocket, symKey, username)
@@ -222,9 +235,10 @@ def client():
                 break
             else:
                 print("Invalid choice. Please try again.")
+
         # Close the client socket when done
         clientSocket.close()
-        
+
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------

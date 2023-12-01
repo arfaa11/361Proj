@@ -59,10 +59,12 @@ def authenticateClient(connectionSocket):
         # Ensure to receive exactly 256 bytes for each
         encryptedUser = connectionSocket.recv(256)
         encryptedPass = connectionSocket.recv(256)
+
         # Decrypting the received credentials using the server's private key
         decryptor = PKCS1_OAEP.new(serverPrivKey)
         username = decryptor.decrypt(encryptedUser).decode('ascii')
         password = decryptor.decrypt(encryptedPass).decode('ascii')
+
         # Validating the decrypted credentials
         if username in user_passData and user_passData[username] == password:
             print(f"Connection Accepted and Symmetric Key Generated for client: {username}")
@@ -114,17 +116,21 @@ def processAndStoreEmail(email, senderUsername):
     """
     # Adding the current date and time to the email
     email['Time and Date'] = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
     # Processing each recipient in the email
     recipients = email['To'].split(';')
+
     for recipient in recipients:
         # Creating a directory for the recipient if it does not exist
         recipientDir = os.path.join('ClientFolders', recipient)
         if not os.path.exists(recipientDir):
             os.makedirs(recipientDir)
+
         # Saving the email as a JSON file in the recipient's directory
         emailFilename = f"{senderUsername}_{email['Title'].replace(' ', '_')}.json"
         with open(os.path.join(recipientDir, emailFilename), 'w') as emailFile:
             json.dump(email, emailFile)
+
         print(f"Email from {senderUsername} to {recipient} stored successfully.")
 
 def displayInboxList(connectionSocket, username, symKey):
@@ -139,9 +145,11 @@ def displayInboxList(connectionSocket, username, symKey):
     """
     # Locating the inbox directory of the client
     inboxDir = os.path.join('ClientFolders', username)
+
     # Listing all files (emails) in the inbox directory
     inboxList = os.listdir(inboxDir) if os.path.exists(inboxDir) else []
     inboxListStr = '\n'.join(inboxList)
+
     # Sending the list of emails to the client
     sendEncryptedMsg(connectionSocket, inboxListStr, symKey)
 
@@ -158,14 +166,17 @@ def displayEmailContents(connectionSocket, username, symKey):
     # Prompting the client to enter the index of the email they wish to view
     sendEncryptedMsg(connectionSocket, "Enter email index:", symKey)
     emailIndex = recvDecryptedMsg(connectionSocket, symKey)
+
     try:
         # Opening and reading the requested email file
         emailFilename = os.path.join('ClientFolders', username, emailIndex)
         with open(emailFilename, 'r') as emailFile:
             emailContent = json.load(emailFile)
             emailContentStr = json.dumps(emailContent, indent=4)
+
             # Sending the email content to the client
             sendEncryptedMsg(connectionSocket, emailContentStr, symKey)
+            
     except Exception as e:
         # Handling errors in reading the email file
         sendEncryptedMsg(connectionSocket, f"Error reading email: {e}", symKey)
@@ -225,12 +236,10 @@ def handleClient(connectionSocket):
 
     if not auth_success:
         connectionSocket.send(b"FAILURE")
-        connectionSocket.send(b"FAILURE".encode('ascii'))
         connectionSocket.close()
         return
 
     connectionSocket.send(b"SUCCESS")
-    connectionSocket.send(b"SUCCESS".encode('ascii'))
 
     # Generating a symmetric AES key for encrypted communication
     symKey = get_random_bytes(16)
@@ -275,7 +284,7 @@ def server():
             sys.exit(0)
         else:  # In the parent process
             connectionSocket.close()
-            
+
 # Run the server program
 if __name__ == "__main__":
     server()
