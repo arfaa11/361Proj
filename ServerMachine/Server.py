@@ -43,16 +43,19 @@ for username in user_passData:
         clientPubKeys[username] = RSA.import_key(pubKeyFile.read())
 
 # ------------------------------------------------------------------------------
-# Create a dictionary to store client inboxes
+# Access the clientInboxes.json dictionary
 # ------------------------------------------------------------------------------
+def readClientInboxes():
+    try:
+        with open('clientInboxes.json', 'r') as file:
+            return json.load(file)
+    except FileNotFoundError:
+        return {'client1': [], 'client2': [], 'client3': [], 'client4': [], 'client5': []}
+    
+def writeClientInboxes(clientInboxes):
+    with open('clientInboxes.json', 'w') as file:
+        json.dump(clientInboxes, file)
 
-clientInboxes = {
-    'client1': [],
-    'client2': [],
-    'client3': [],
-    'client4': [],
-    'client5': []
-}
 # ------------------------------------------------------------------------------
 # Helper functions for server
 # ------------------------------------------------------------------------------
@@ -140,15 +143,14 @@ def processAndStoreEmail(email, senderUsername):
     Return:
         - None
     """
-    # Access the clientInboxes dictionary
-    global clientInboxes
+    clientInboxes = readClientInboxes()  # Read current inboxes
 
     # Adding the current date and time to the email
     email['Time and Date'] = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     recipients = email['To'].split(';')
 
     for recipient in recipients:
-        # Ensure to create the directory inside a specific base directory (e.g., 'ClientFolders')
+        # Create the directory inside a specific base directory (e.g., 'ClientFolders')
         recipientDir = os.path.join('ClientFolders', recipient)  
         if not os.path.exists(recipientDir):
             os.makedirs(recipientDir)
@@ -167,11 +169,12 @@ def processAndStoreEmail(email, senderUsername):
             }
             if recipient in clientInboxes:
                 clientInboxes[recipient].append(emailData)
-                print(clientInboxes[recipient])
 
             print(f"Email from {senderUsername} to {recipient} stored successfully.")
         except:
             print(f"Failed to store email for {recipient}")
+
+    writeClientInboxes(clientInboxes)  # Write updated inboxes
 
 
 def displayInboxList(connectionSocket, username, symKey):
@@ -184,8 +187,7 @@ def displayInboxList(connectionSocket, username, symKey):
     Return:
         - None
     """
-    # Access the clientInboxes dictionary
-    global clientInboxes
+    clientInboxes = readClientInboxes()  # Read current inboxes
 
     # Check if the username exists in clientInboxes
     if username in clientInboxes:
