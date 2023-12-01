@@ -224,17 +224,18 @@ def client():
             clientSocket.send(encryptMessage(choice, symKey))
 
             # Handle user choice
-            if choice == '1':
-                sendEmail(clientSocket, symKey, username)
-            elif choice == '2':
-                displayInboxList(clientSocket, symKey)
-            elif choice == '3':
-                displayEmailContents(clientSocket, symKey)
-            elif choice == '4':
-                print("The connection is terminated with the server.")
-                break
-            else:
-                print("Invalid choice. Please try again.")
+            match choice:
+                case '1':
+                    sendEmail(clientSocket, symKey, username)
+                case '2':
+                    displayInboxList(clientSocket, symKey)
+                case '3':
+                    displayEmailContents(clientSocket, symKey)
+                case '4':
+                    print("The connection is terminated with the server.")
+                    break
+                case _:
+                    print("Invalid choice. Please try again.")
 
         # Close the client socket when done
         clientSocket.close()

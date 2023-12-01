@@ -176,10 +176,20 @@ def displayEmailContents(connectionSocket, username, symKey):
 
             # Sending the email content to the client
             sendEncryptedMsg(connectionSocket, emailContentStr, symKey)
-            
+
     except Exception as e:
         # Handling errors in reading the email file
         sendEncryptedMsg(connectionSocket, f"Error reading email: {e}", symKey)
+
+def getChoice(connectionSocket, symKey):
+    menumessage = ("\nSelect the operation:\n\t1) Create and send and email"
+                "\n\t2) Display the inbox list\n\t3) Display the email contents"
+                "\n\t4) Terminate the connection\n\tchoice: ")
+    
+    sendEncryptedMsg(connectionSocket, menumessage, symKey)
+    choice = recvDecryptedMsg(connectionSocket, symKey)
+    
+    return choice
 
 def handleEmailOperations(connectionSocket, username, symKey):
     """
@@ -191,37 +201,29 @@ def handleEmailOperations(connectionSocket, username, symKey):
     Return:
         - None
     """
-    # Presenting the email operation menu to the client
-    menu = '''Select the operation:
-    1) Create and send an email
-    2) Display the inbox list
-    3) Display the email contents
-    4) Terminate the connection
-    choice: '''
-    sendEncryptedMsg(connectionSocket, menu, symKey)
-    
-    # Receiving the client's choice
-    choice = recvDecryptedMsg(connectionSocket, symKey)
+    # Presenting the email operation menu to the client and getting the choice
+    choice = getChoice(connectionSocket, symKey)
     
     # Handling the client's choice
-    if choice == '1':
-        # Handling email creation and sending
-        sendEncryptedMsg(connectionSocket, "Send the email details", symKey)
-        email_json = recvDecryptedMsg(connectionSocket, symKey)
-        email = json.loads(email_json)
-        processAndStoreEmail(email, username)
-    elif choice == '2':
-        # Handling inbox listing
-        displayInboxList(connectionSocket, username, symKey)
-    elif choice == '3':
-        # Handling displaying email contents
-        displayEmailContents(connectionSocket, username, symKey)
-    elif choice == '4':
-        # Handling connection termination
-        print(f"Terminating connection with {username}")
-    else:
-        # Handling invalid choices
-        sendEncryptedMsg(connectionSocket, "Invalid choice, please try again.", symKey)
+    match choice:
+        case '1':
+            # Handling email creation and sending
+            sendEncryptedMsg(connectionSocket, "Send the email details", symKey)
+            email_json = recvDecryptedMsg(connectionSocket, symKey)
+            email = json.loads(email_json)
+            processAndStoreEmail(email, username)
+        case '2':
+            # Handling inbox listing
+            displayInboxList(connectionSocket, username, symKey)
+        case '3':
+            # Handling displaying email contents
+            displayEmailContents(connectionSocket, username, symKey)
+        case '4':
+            # Handling connection termination
+            print(f"Terminating connection with {username}")
+        case _:
+            # Handling invalid choices
+            sendEncryptedMsg(connectionSocket, "Invalid choice, please try again.", symKey)
 
 def handleClient(connectionSocket):
     """
