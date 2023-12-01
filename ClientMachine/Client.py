@@ -187,6 +187,9 @@ def client():
     clientSocket.send(encryptedUser)
     clientSocket.send(encryptedPass)
 
+    # Receive response from server
+    serverResponse = clientSocket.recv(1024)
+
     # Receive and decrypt the symmetric key from the server
     encryptedSymKey = clientSocket.recv(256)
     privateKey = loadPrivateKey(username)
@@ -195,12 +198,8 @@ def client():
         print("Error: Private key not found.")
         return
     
-    # Debug print line <TODO: Remove when done>
-    print(encryptedSymKey)
     symKeyCipher = PKCS1_OAEP.new(privateKey)
-    #symKey = symKeyCipher.decrypt(encryptedSymKey)
-
-    serverResponse = clientSocket.recv(1024)
+    symKey = symKeyCipher.decrypt(encryptedSymKey)
 
     if serverResponse == b"FAILURE":
         print("Invalid username or password.\nTerminating.")
