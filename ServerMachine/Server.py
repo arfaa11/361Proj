@@ -232,18 +232,18 @@ def displayInboxList(connectionSocket, username, symKey):
         inbox = []
 
     # Format the inbox list header
-    inboxListFormatted = "{:<10}{:<10}{:<25}{:<100}\n".format("Index", "From", "DateTime", "Title")
-    
+    inboxListFormatted = "\n{:<10}{:<10}{:<25}{:<100}\n".format("Index", "From", "DateTime", "Title")
+
     # Add each email to the formatted list
     index = 1
     for email in inbox:
         # Split sender and title
         sender, title = email['From'], email['Title']
         dateTime = email['DateTime']
-    
+
         # Add formatted email information to the list
         inboxListFormatted += "{:<10}{:<10}{:<25}{:<100}\n".format(str(index), sender, dateTime, title)
-    
+
         # Increment the index
         index += 1
 
