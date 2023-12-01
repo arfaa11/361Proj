@@ -196,7 +196,7 @@ def client():
         return
     
     symKeyCipher = PKCS1_OAEP.new(privateKey)
-    symKey = symKeyCipher.decrypt(encryptedSymKey)
+    #symKey = symKeyCipher.decrypt(encryptedSymKey)
 
     serverResponse = clientSocket.recv(1024)
 
@@ -205,6 +205,8 @@ def client():
         clientSocket.close()
         return
     
+    symKey = symKeyCipher.decrypt(encryptedSymKey)
+
     # Check for invalid username or password response
     if symKey == b"Invalid username or password":
         print("Invalid username or password.\nTerminating.")

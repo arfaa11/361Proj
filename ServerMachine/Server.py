@@ -244,7 +244,7 @@ def handleClient(connectionSocket):
     connectionSocket.send(b"SUCCESS")
 
     # Generating a symmetric AES key for encrypted communication
-    symKey = get_random_bytes(16)
+    symKey = get_random_bytes(32)
 
     # Encrypting the symmetric key with the client's public RSA key and sending it
     clientPubKey = clientPubKeys[username]
