@@ -195,6 +195,8 @@ def client():
         print("Error: Private key not found.")
         return
     
+    # Debug print line <TODO: Remove when done>
+    print(encryptedSymKey)
     symKeyCipher = PKCS1_OAEP.new(privateKey)
     #symKey = symKeyCipher.decrypt(encryptedSymKey)
 
