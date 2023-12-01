@@ -37,6 +37,7 @@ with open('user_pass.json', 'r') as user_passFile:
 # Initializing a dictionary to hold public RSA keys of all clients
 clientPubKeys = {}
 for username in user_passData:
+    
     # Load and store each client's public RSA key
     with open(f'{username}_public.pem', 'rb') as pubKeyFile:
         clientPubKeys[username] = RSA.import_key(pubKeyFile.read())
@@ -67,13 +68,21 @@ def authenticateClient(connectionSocket):
 
         # Validating the decrypted credentials
         if username in user_passData and user_passData[username] == password:
+            # Handling valid credentials
             print(f"Connection Accepted and Symmetric Key Generated for client: {username}")
+            # return username, True tuple
             return username, True
+        
         else:
+            # Handling invalid credentials
             print(f"The received client information: {username} is invalid (Connection Terminated).")
+            # return None, False tuple
             return None, False
+    
     except Exception as e:
+        # Handling errors in authentication
         print(f"Authentication error: {e}")
+        # return None, False tuple
         return None, False
     
 def sendEncryptedMsg(connectionSocket, message, symKey):
@@ -86,9 +95,11 @@ def sendEncryptedMsg(connectionSocket, message, symKey):
     Return:
         - None
     """
-    
+    # Use AES in ECB mode to encrypt the message
     cipher = AES.new(symKey, AES.MODE_ECB)
+    # Pad and encrypt the message, and encode it to bytes
     encryptedMsg = cipher.encrypt(pad(message.encode('ascii'), AES.block_size))
+    # Send the encrypted message to the client
     connectionSocket.send(encryptedMsg)
 
 def recvDecryptedMsg(connectionSocket, symKey):
@@ -100,9 +111,13 @@ def recvDecryptedMsg(connectionSocket, symKey):
     Returns:
         - str: The decrypted message.
     """
+    # Receive the encrypted message from the client
     encryptedMsg = connectionSocket.recv(1024)
+    # Use AES in ECB mode to decrypt the message
     cipher = AES.new(symKey, AES.MODE_ECB)
+    # Decrypt the message and unpad it
     decryptedMsg = unpad(cipher.decrypt(encryptedMsg), AES.block_size)
+    # Decode the decrypted message to ASCII and return
     return decryptedMsg.decode('ascii')
 
 def processAndStoreEmail(email, senderUsername):
@@ -131,6 +146,7 @@ def processAndStoreEmail(email, senderUsername):
         with open(os.path.join(recipientDir, emailFilename), 'w') as emailFile:
             json.dump(email, emailFile)
 
+        # Printing a success message
         print(f"Email from {senderUsername} to {recipient} stored successfully.")
 
 def displayInboxList(connectionSocket, username, symKey):
@@ -182,13 +198,26 @@ def displayEmailContents(connectionSocket, username, symKey):
         sendEncryptedMsg(connectionSocket, f"Error reading email: {e}", symKey)
 
 def getChoice(connectionSocket, symKey):
+    """
+    Purpose: Get the client's choice of email operation.
+    Parameters:
+        - connectionSocket (socket): The socket connected to the client.
+        - symKey (bytes): The symmetric key for AES encryption.
+    Return:
+        - str: The client's choice of email operation.
+        """
+    # Creating the email operation menu
     menumessage = ("\nSelect the operation:\n\t1) Create and send and email"
                 "\n\t2) Display the inbox list\n\t3) Display the email contents"
                 "\n\t4) Terminate the connection\n\tchoice: ")
     
+    # Sending the encrypted menu to the client
     sendEncryptedMsg(connectionSocket, menumessage, symKey)
+    
+    # Receiving the client's choice
     choice = recvDecryptedMsg(connectionSocket, symKey)
     
+    # Return the client's choice
     return choice
 
 def handleEmailOperations(connectionSocket, username, symKey):
@@ -236,11 +265,14 @@ def handleClient(connectionSocket):
     # Authenticating the client
     username, auth_success = authenticateClient(connectionSocket)
 
+    # Check if authentication was successful
     if not auth_success:
+        # Sending a failure message to the client and closing the connection
         connectionSocket.send(b"FAILURE")
         connectionSocket.close()
         return
 
+    # Sending a success message to the client
     connectionSocket.send(b"SUCCESS")
 
     # Generating a symmetric AES key for encrypted communication
@@ -287,11 +319,11 @@ def server():
         # Forking a new process for each client connection
         pid = os.fork()
         if pid == 0:  # In the child process
-            serverSocket.close()
-            handleClient(connectionSocket)
-            sys.exit(0)
+            serverSocket.close() # Close the server socket in the child process
+            handleClient(connectionSocket) # Handle the client connection
+            sys.exit(0) # Exit the child process
         else:  # In the parent process
-            connectionSocket.close()
+            connectionSocket.close() # Close the connection socket in the parent process
 
 # Run the server program
 if __name__ == "__main__":
