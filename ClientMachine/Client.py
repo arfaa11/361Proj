@@ -198,9 +198,6 @@ def displayInboxList(clientSocket, symKey):
         - symKey (bytes): The symmetric key for AES encryption.
     Return: None
     """
-    # Request the server to send the inbox list
-    clientSocket.send(encryptMessage("2", symKey))  # '2' is the menu option for inbox list
-    
     # Receive and decrypt the inbox list from the server
     inboxList = decryptMessage(clientSocket.recv(1024), symKey)
     

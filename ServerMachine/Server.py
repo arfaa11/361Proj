@@ -270,7 +270,7 @@ def displayEmailContents(connectionSocket, username, emailIndex, symKey):
             emailInfo = clientInboxes[username][emailIndex - 1]
             sender, title = emailInfo['From'], emailInfo['Title']
             dateTime = emailInfo['DateTime']
-            recipients = emailInfo['To']
+            #recipients = emailInfo['To']
             contentLength = emailInfo['Content Length']
             
             # Adjust the title to match the file name format
@@ -284,7 +284,7 @@ def displayEmailContents(connectionSocket, username, emailIndex, symKey):
                 content = emailFile.read()
                 
                 # Format the email content
-                emailContentStr = f"\nFrom: {sender}\nTo: {recipients}\nTime and Date Received: {dateTime}\nTitle: {title}\nContent Length: {contentLength}\nContents:\n{content}"
+                emailContentStr = f"\nFrom: {sender}\nTo: {username}\nTime and Date Received: {dateTime}\nTitle: {title}\nContent Length: {contentLength}\nContents:\n{content}"
 
             # Send the formatted email content to the client
             sendEncryptedMsg(connectionSocket, emailContentStr, symKey)
