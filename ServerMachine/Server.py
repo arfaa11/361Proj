@@ -151,7 +151,7 @@ def processAndStoreEmail(email, senderUsername):
 
     for recipient in recipients:
         # Creating a directory for the recipient if it does not exist
-        recipientDir = os.path.join('ClientFolders', recipient)
+        recipientDir = os.path.join(recipient)
         if not os.path.exists(recipientDir):
             os.makedirs(recipientDir)
 
