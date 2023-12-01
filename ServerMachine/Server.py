@@ -231,14 +231,19 @@ def displayInboxList(connectionSocket, username, symKey):
     else:
         inbox = []
 
-    # Format the inbox list
-    inboxListFormatted = "Index From DateTime Title\n"
+    # Format the inbox list header
+    inboxListFormatted = "{:<10}{:<10}{:<25}{:<100}\n".format("Index", "From", "DateTime", "Title")
+    
     # Add each email to the formatted list
     index = 1
     for email in inbox:
         # Split sender and title
         sender, title = email['From'], email['Title']
-        inboxListFormatted += f"{index} {sender} {email['DateTime']} {title}\n"
+        dateTime = email['DateTime']
+    
+        # Add formatted email information to the list
+        inboxListFormatted += "{:<10}{:<10}{:<25}{:<100}\n".format(str(index), sender, dateTime, title)
+    
         # Increment the index
         index += 1
 
@@ -267,14 +272,17 @@ def displayEmailContents(connectionSocket, username, emailIndex, symKey):
             dateTime = emailInfo['DateTime']
             recipients = emailInfo['To']
             contentLength = emailInfo['Content Length']
+            
             # Adjust the title to match the file name format
             filename = f'{sender}_{title}.txt'
+            
             # Get the path to the email file
             emailPath = os.path.join('ClientFolders', username, filename)
 
             # Read the email contents from the file
             with open(emailPath, 'r') as emailFile:
                 content = emailFile.read()
+                
                 # Format the email content
                 emailContentStr = f"\nFrom: {sender}\nTo: {recipients}\nTime and Date Received: {dateTime}\nTitle: {title}\nContent Length: {contentLength}\nContents:\n{content}"
 
@@ -342,7 +350,7 @@ def handleEmailOperations(connectionSocket, username, symKey):
             case '3':
             # Handling displaying email contents
                 # Get the index of the email to be displayed
-                sendEncryptedMsg(connectionSocket, "Enter email index:", symKey)
+                sendEncryptedMsg(connectionSocket, "Enter the email index you wish to view:", symKey)
                 emailIndex = int(recvDecryptedMsg(connectionSocket, symKey))
                 # Display the email contents
                 displayEmailContents(connectionSocket, username, emailIndex, symKey)
