@@ -43,6 +43,17 @@ for username in user_passData:
         clientPubKeys[username] = RSA.import_key(pubKeyFile.read())
 
 # ------------------------------------------------------------------------------
+# Create a dictionary to store client inboxes
+# ------------------------------------------------------------------------------
+
+clientInboxes = {
+    'client1': [],
+    'client2': [],
+    'client3': [],
+    'client4': [],
+    'client5': []
+}
+# ------------------------------------------------------------------------------
 # Helper functions for server
 # ------------------------------------------------------------------------------
 
@@ -129,6 +140,9 @@ def processAndStoreEmail(email, senderUsername):
     Return:
         - None
     """
+    # Access the clientInboxes dictionary
+    global clientInboxes
+
     # Adding the current date and time to the email
     email['Time and Date'] = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -143,11 +157,22 @@ def processAndStoreEmail(email, senderUsername):
 
         # Store the email with TITLE as the filename and CONTENT as the file content
         title = email['Title'].replace(' ', '_')
-        with open(f'{title}.txt', 'w') as emailFile:
-            emailFile.write(email['Content'])
+        filename = f'{title}.txt'
 
-        # Printing a success message
-        print(f"Email from {senderUsername} to {recipient} stored successfully.")
+        
+        with open(os.path.join(recipientDir, filename), 'w') as emailFile:
+            emailFile.write(email['Content'])
+        
+        # Update the global inbox dictionary for the recipient
+        emailData = {
+            'From': senderUsername,
+            'DateTime': email['Time and Date'],
+            'Title': email['Title']
+        }
+        if recipient in clientInboxes:
+            clientInboxes[recipient].append(emailData)
+    print(f"Email from {senderUsername} to {email['To']} stored successfully.")
+
 
 def displayInboxList(connectionSocket, username, symKey):
     """
@@ -159,14 +184,23 @@ def displayInboxList(connectionSocket, username, symKey):
     Return:
         - None
     """
-    # Locating the inbox directory of the client
-    inboxDir = os.path.join('ClientFolders', username)
+    # Access the clientInboxes dictionary
+    global clientInboxes
 
-    # Listing all files (emails) in the inbox directory
-    inboxList = os.listdir(inboxDir) if os.path.exists(inboxDir) else []
-    #inboxListStr = '\n'.join(inboxList)
+    # Check if the username exists in clientInboxes
+    if username in clientInboxes:
+        inbox = clientInboxes[username]
+    else:
+        inbox = []
 
-    inboxListFormatted = "Index From DateTime Title\n" + "\n".join([f"{idx} {email['From']} {email['Time and Date']} {email['Title']}" for idx, email in enumerate(inboxList)])
+    # Format the inbox list
+    inboxListFormatted = "Index From DateTime Title\n"
+    index = 1
+    for email in inbox:
+        inboxListFormatted += f"{index} {email['From']} {email['DateTime']} {email['Title']}\n"
+        index += 1  # Increment the index
+
+    # Encrypt and send the formatted inbox list to the client
     sendEncryptedMsg(connectionSocket, inboxListFormatted, symKey)
 
 def displayEmailContents(connectionSocket, username, symKey):
