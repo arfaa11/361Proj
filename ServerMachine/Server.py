@@ -340,7 +340,7 @@ def handleEmailOperations(connectionSocket, username, symKey):
         match choice:
             case '1':
             # Handling email creation and sending  
-                processAndStoreEmail(emailInfo, username)
+                processAndStoreEmail(connectionSocket, username, symKey)
             case '2':
             # Handling inbox listing
                 displayInboxList(connectionSocket, username, symKey)
