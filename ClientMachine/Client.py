@@ -215,6 +215,9 @@ def client():
         return
     
     if symKey is not None:
+
+        # Send OK to server
+        clientSocket.send(encryptMessage("OK", symKey))
         # Start the user interaction loop
         while True:
             # Receive menu from server

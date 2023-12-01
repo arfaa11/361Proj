@@ -253,8 +253,8 @@ def handleClient(connectionSocket):
     connectionSocket.send(encryptedSymKey)
 
     # Check if 'OK' received from client
-    ok_msg = recvDecryptedMsg(connectionSocket, symKey)
-    if ok_msg != "OK":
+    okResponse = recvDecryptedMsg(connectionSocket, symKey)
+    if okResponse != "OK":
         print("Error: Did not receive OK from client.")
         return
 
