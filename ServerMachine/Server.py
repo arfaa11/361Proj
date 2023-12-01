@@ -145,33 +145,33 @@ def processAndStoreEmail(email, senderUsername):
 
     # Adding the current date and time to the email
     email['Time and Date'] = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    # Processing each recipient in the email
     recipients = email['To'].split(';')
 
     for recipient in recipients:
-        # Creating a directory for the recipient if it does not exist
-        recipientDir = os.path.join(recipient)
+        # Ensure to create the directory inside a specific base directory (e.g., 'ClientFolders')
+        recipientDir = os.path.join('ClientFolders', recipient)  
         if not os.path.exists(recipientDir):
             os.makedirs(recipientDir)
 
-        # Store the email with TITLE as the filename and CONTENT as the file content
         title = email['Title'].replace(' ', '_')
         filename = f'{title}.txt'
 
-        
-        with open(os.path.join(recipientDir, filename), 'w') as emailFile:
-            emailFile.write(email['Content'])
-        
-        # Update the global inbox dictionary for the recipient
-        emailData = {
-            'From': senderUsername,
-            'DateTime': email['Time and Date'],
-            'Title': email['Title']
-        }
-        if recipient in clientInboxes:
-            clientInboxes[recipient].append(emailData)
-    print(f"Email from {senderUsername} to {email['To']} stored successfully.")
+        try:
+            with open(os.path.join(recipientDir, filename), 'w') as emailFile:
+                emailFile.write(email['Content'])
+
+            emailData = {
+                'From': senderUsername,
+                'DateTime': email['Time and Date'],
+                'Title': email['Title']
+            }
+            if recipient in clientInboxes:
+                clientInboxes[recipient].append(emailData)
+                print(clientInboxes[recipient])
+
+            print(f"Email from {senderUsername} to {recipient} stored successfully.")
+        except:
+            print(f"Failed to store email for {recipient}")
 
 
 def displayInboxList(connectionSocket, username, symKey):
