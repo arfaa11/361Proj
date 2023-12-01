@@ -350,7 +350,7 @@ def handleEmailOperations(connectionSocket, username, symKey):
             case '3':
             # Handling displaying email contents
                 # Get the index of the email to be displayed
-                sendEncryptedMsg(connectionSocket, "Enter the email index you wish to view:", symKey)
+                sendEncryptedMsg(connectionSocket, "the server request email index", symKey)
                 emailIndex = int(recvDecryptedMsg(connectionSocket, symKey))
                 # Display the email contents
                 displayEmailContents(connectionSocket, username, emailIndex, symKey)

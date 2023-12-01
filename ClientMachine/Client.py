@@ -213,20 +213,20 @@ def displayEmailContents(clientSocket, symKey):
     Return: None
     """
     # Request the server to send the index prompt
-    indexPrompt = decryptMessage(clientSocket.recv(1024), symKey)
-    print(indexPrompt)
+    serverRequest = decryptMessage(clientSocket.recv(1024), symKey)
+    # Check if the server request is the email index prompt
+    if serverRequest == "the server request email index":
+        # Prompt user to enter the email index
+        emailIndex = str(input("Enter the email index you wish to view: "))
 
-    # Get the email index from the user
-    emailIndex = str(input())
-
-    # Send the email index to the server
-    clientSocket.send(encryptMessage(emailIndex, symKey))
-    
-    # Receive and decrypt the email content from the server
-    emailContent = decryptMessage(clientSocket.recv(1024), symKey)
-    
-    # Print the email content
-    print("Email Content:\n", emailContent)
+        # Send the email index to the server
+        clientSocket.send(encryptMessage(emailIndex, symKey))
+        
+        # Receive and decrypt the email content from the server
+        emailContent = decryptMessage(clientSocket.recv(1024), symKey)
+        
+        # Print the email content
+        print("Email Content:\n", emailContent)
 
 #------------------------------------------------------------------------------
 # Main client function
