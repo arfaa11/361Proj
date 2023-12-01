@@ -167,6 +167,7 @@ def sendEmail(clientSocket, symKey, username):
     if destinations and title and content:
         contentLength = str(len(content))
         encryptedContentLength = encryptMessage(contentLength, symKey)
+        
         # Send content length first
         clientSocket.send(encryptedContentLength)
 

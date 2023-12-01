@@ -166,14 +166,19 @@ def processAndStoreEmail(email, senderUsername):
     Return:
         - None
     """
-    clientInboxes = readClientInboxes()  # Read current inboxes
+    # Receive content length first
+    encryptedContentLength = connectionSocket.recv(1024)
+    contentLength = int(recvDecryptedMsg(connectionSocket, encryptedContentLength))
+
+    # Receive the rest of the email information
+    encryptedEmailInfo = connectionSocket.recv(1024)
+    emailInfo = json.loads(recvDecryptedMsg(connectionSocket, encryptedEmailInfo))
 
     # Adding the current date and time to the email
-    email['Time and Date'] = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    recipients = email['To'].split(';')
+    emailInfo['Time and Date'] = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    recipients = emailInfo['To'].split(';')
 
-    # Get the length of the email content
-    contentLength = len(email['Content'])
+    clientInboxes = readClientInboxes()
 
     # Define the file name format
     title = email['Title'].replace(' ', '_')
@@ -281,7 +286,7 @@ def displayEmailContents(connectionSocket, username, symKey):
             with open(emailPath, 'r') as emailFile:
                 content = emailFile.read()
                 # Format the email content
-                emailContentStr = f"From: {sender}\nTo: {username}\nTime and Date Received: {dateTime}\nTitle: {title}\nContent Length: {contentLength}\nContents:\n{content}"
+                emailContentStr = f"From: {sender}\nTo: {emailInfo['To']}\nTime and Date Received: {dateTime}\nTitle: {title}\nContent Length: {contentLength}\nContents:\n{content}"
 
             # Send the formatted email content to the client
             sendEncryptedMsg(connectionSocket, emailContentStr, symKey)
@@ -334,12 +339,7 @@ def handleEmailOperations(connectionSocket, username, symKey):
         choice = getChoice(connectionSocket, symKey)
         match choice:
             case '1':
-                # Receive content length
-                contentLength = int(recvDecryptedMsg(connectionSocket, symKey))
-                # Receive the rest of the email information
-                emailInfo = json.loads(recvDecryptedMsg(connectionSocket, symKey))
-                # Process and store email
-                emailInfo['Time and Date'] = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+            # Handling email creation and sending  
                 processAndStoreEmail(emailInfo, username)
             case '2':
             # Handling inbox listing
