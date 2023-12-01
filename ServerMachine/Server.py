@@ -172,6 +172,9 @@ def processAndStoreEmail(email, senderUsername):
     email['Time and Date'] = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     recipients = email['To'].split(';')
 
+    # Get the length of the email content
+    contentLength = len(email['Content'])
+
     # Define the file name format
     title = email['Title'].replace(' ', '_')
     # Format: <senderUsername>_<emailTitle>.txt
