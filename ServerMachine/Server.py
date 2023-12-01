@@ -200,15 +200,15 @@ def processAndStoreEmail(email, senderUsername):
             # Check if the recipient already has an inbox
             if recipient in clientInboxes:
                 clientInboxes[recipient].append(emailData)
-
-            # If not, create a new inbox for the recipient
-            print(f"Email from {senderUsername} to {recipient} stored successfully.")
         
         # Handle errors in storing the email
         except:
             print(f"Failed to store email for {recipient}")
 
     writeClientInboxes(clientInboxes)  # Write updated inboxes
+    
+    # Print statement for email sent confirmation
+    print(f"An email from {senderUsername} is sent to {';'.join(recipients)} has a content length of {contentLength}")
 
 
 def displayInboxList(connectionSocket, username, symKey):
