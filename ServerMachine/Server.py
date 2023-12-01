@@ -166,13 +166,13 @@ def processAndStoreEmail(email, senderUsername):
     Return:
         - None
     """
+    clientInboxes = readClientInboxes()  # Read current inboxes
 
     # Adding the current date and time to the email
-    emailInfo['Time and Date'] = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    recipients = emailInfo['To'].split(';')
+    email['Time and Date'] = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    recipients = email['To'].split(';')
 
-    clientInboxes = readClientInboxes()
-
+    contentLength = len(email['Content'])
     # Define the file name format
     title = email['Title'].replace(' ', '_')
     # Format: <senderUsername>_<emailTitle>.txt
@@ -208,6 +208,8 @@ def processAndStoreEmail(email, senderUsername):
     
     # Write the updated inboxes to the file
     writeClientInboxes(clientInboxes)  
+    # Print the email send confirmation message to server
+    print(f"An email from {senderUsername} is sent to {';'.join(recipients)} has a content length of {contentLength}")
 
 
 def displayInboxList(connectionSocket, username, symKey):
@@ -277,7 +279,7 @@ def displayEmailContents(connectionSocket, username, symKey):
             with open(emailPath, 'r') as emailFile:
                 content = emailFile.read()
                 # Format the email content
-                emailContentStr = f"From: {sender}\nTo: {emailInfo['To']}\nTime and Date Received: {dateTime}\nTitle: {title}\nContent Length: {contentLength}\nContents:\n{content}"
+                emailContentStr = f"From: {sender}\nTo: {username}\nTime and Date Received: {dateTime}\nTitle: {title}\nContent Length: {contentLength}\nContents:\n{content}"
 
             # Send the formatted email content to the client
             sendEncryptedMsg(connectionSocket, emailContentStr, symKey)
@@ -330,14 +332,13 @@ def handleEmailOperations(connectionSocket, username, symKey):
         choice = getChoice(connectionSocket, symKey)
         match choice:
             case '1':
-            # Handling email creation and sending  
-                # Receive content length first
+                # Receive content length
                 contentLength = int(recvDecryptedMsg(connectionSocket, symKey))
                 # Receive the rest of the email information
                 emailInfo = json.loads(recvDecryptedMsg(connectionSocket, symKey))
+                # Process and store email
+                emailInfo['Time and Date'] = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
                 processAndStoreEmail(emailInfo, username)
-                # Print the email send confirmation message to server
-                print(f"An email from {senderUsername} is sent to {';'.join(recipients)} has a content length of {contentLength}")
             case '2':
             # Handling inbox listing
                 displayInboxList(connectionSocket, username, symKey)
