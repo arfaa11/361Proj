@@ -250,6 +250,12 @@ def handleClient(connectionSocket):
     encryptedSymKey = encryptor.encrypt(symKey)
     connectionSocket.send(encryptedSymKey)
 
+    # Check if 'OK' received from client
+    ok_msg = recvDecryptedMsg(connectionSocket, symKey)
+    if ok_msg != "OK":
+        print("Error: Did not receive OK from client.")
+        return
+
     # Handling email operations
     handleEmailOperations(connectionSocket, username, symKey)
 
