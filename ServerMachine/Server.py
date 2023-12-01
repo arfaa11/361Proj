@@ -139,7 +139,7 @@ def processAndStoreEmail(email, senderUsername):
         # Creating a directory for the recipient if it does not exist
         recipientDir = os.path.join('ClientFolders', recipient)
         if not os.path.exists(recipientDir):
-            os.makedirs(recipientDir)
+            os.mkdir(recipientDir)
 
         # Saving the email as a JSON file in the recipient's directory
         emailFilename = f"{senderUsername}_{email['Title'].replace(' ', '_')}.json"
