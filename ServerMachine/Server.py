@@ -8,6 +8,9 @@ Assignment: Secure Mail Transfer Project
 Program name: Server.py
 Program purpose: <TODO>
 '''
+# ------------------------------------------------------------------------------
+# Import statements
+# ------------------------------------------------------------------------------
 import json
 import socket
 import os
@@ -46,13 +49,33 @@ for username in user_passData:
 # Access the clientInboxes.json dictionary
 # ------------------------------------------------------------------------------
 def readClientInboxes():
+    """
+    Purpose: Read the client inboxes from the clientInboxes.json file.
+    Parameters:
+        - None
+    Return:
+        - dict: The client inboxes dictionary.
+    """
+    # Check if the clientInboxes.json file exists
     try:
+        # Read the client inboxes from the file
         with open('clientInboxes.json', 'r') as file:
+            # Return the client inboxes dictionary
             return json.load(file)
+    # If the file does not exist, return an empty dictionary
     except FileNotFoundError:
+        # Return an empty dictionary
         return {'client1': [], 'client2': [], 'client3': [], 'client4': [], 'client5': []}
     
 def writeClientInboxes(clientInboxes):
+    """
+    Purpose: Write the client inboxes to the clientInboxes.json file.
+    Parameters:
+        - clientInboxes (dict): The client inboxes dictionary.
+    Return:
+        - None
+    """
+    # Write the client inboxes to the file
     with open('clientInboxes.json', 'w') as file:
         json.dump(clientInboxes, file)
 
@@ -150,27 +173,38 @@ def processAndStoreEmail(email, senderUsername):
     recipients = email['To'].split(';')
 
     for recipient in recipients:
-        # Create the directory inside a specific base directory (e.g., 'ClientFolders')
-        recipientDir = os.path.join('ClientFolders', recipient)  
+        # Create the directory inside the ClientFolders directory
+        recipientDir = os.path.join('ClientFolders', recipient) 
+        # Create the directory if it does not exist 
         if not os.path.exists(recipientDir):
             os.makedirs(recipientDir)
 
+        # Create the email file
         title = email['Title'].replace(' ', '_')
+        # Create the filename
         filename = f'{title}.txt'
 
+        # Store the email in the recipient's directory
         try:
+            # Write the email to the file
             with open(os.path.join(recipientDir, filename), 'w') as emailFile:
                 emailFile.write(email['Content'])
-
+            
+            # Store the email in the recipient's inbox
             emailData = {
                 'From': senderUsername,
                 'DateTime': email['Time and Date'],
                 'Title': email['Title']
             }
+            
+            # Check if the recipient already has an inbox
             if recipient in clientInboxes:
                 clientInboxes[recipient].append(emailData)
 
+            # If not, create a new inbox for the recipient
             print(f"Email from {senderUsername} to {recipient} stored successfully.")
+        
+        # Handle errors in storing the email
         except:
             print(f"Failed to store email for {recipient}")
 
@@ -187,18 +221,23 @@ def displayInboxList(connectionSocket, username, symKey):
     Return:
         - None
     """
-    clientInboxes = readClientInboxes()  # Read current inboxes
-
+    # Read the client inboxes
+    clientInboxes = readClientInboxes()
+    
     # Check if the username exists in clientInboxes
     if username in clientInboxes:
         inbox = clientInboxes[username]
+    # If not, create a new inbox for the user
     else:
         inbox = []
 
     # Format the inbox list
     inboxListFormatted = "Index From DateTime Title\n"
+    
+    # Loop through the emails in the inbox
     index = 1
     for email in inbox:
+        # Add the email information to the formatted inbox list
         inboxListFormatted += f"{index} {email['From']} {email['DateTime']} {email['Title']}\n"
         index += 1  # Increment the index
 
