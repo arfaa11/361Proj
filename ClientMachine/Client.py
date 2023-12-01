@@ -39,7 +39,7 @@ def loadPrivateKey(username):
     
     except FileNotFoundError:
         # If the private key file is not found, print an error message
-        print(f"Private key for {username} not found in directory")
+        #print(f"Private key for {username} not found in directory")
         
         # Return None to indicate failure in key loading
         return None
@@ -268,11 +268,12 @@ def client():
     privateKey = loadPrivateKey(username)
 
     if privateKey is None:
-        print("Error: Private key not found.")
+        print("Invalid username or password.\nTerminating.")
         return
     
-    symKeyCipher = PKCS1_OAEP.new(privateKey)
-    symKey = symKeyCipher.decrypt(encryptedSymKey)
+    if serverResponse != b"FAILURE":
+        symKeyCipher = PKCS1_OAEP.new(privateKey)
+        symKey = symKeyCipher.decrypt(encryptedSymKey)
 
     if serverResponse == b"FAILURE":
         print("Invalid username or password.\nTerminating.")
@@ -305,6 +306,9 @@ def client():
             # Handle user choice
             match choice:
                 case '1':
+                    sendEmailRequest = clientSocket.recv(1024)
+                    sendEmailRequest = decryptMessage(sendEmailRequest, symKey)
+                    print(sendEmailRequest)
                     sendEmail(clientSocket, symKey, username)
                 case '2':
                     displayInboxList(clientSocket, symKey)
