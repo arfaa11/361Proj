@@ -172,42 +172,42 @@ def processAndStoreEmail(email, senderUsername):
     email['Time and Date'] = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     recipients = email['To'].split(';')
 
+    # Define the file name format
+    title = email['Title'].replace(' ', '_')
+    # Format: <senderUsername>_<emailTitle>.txt
+    filename = f'{senderUsername}_{title}.txt'
+
+    # Store the email in the recipient's directory
     for recipient in recipients:
-        # Create the directory inside the ClientFolders directory
-        recipientDir = os.path.join('ClientFolders', recipient) 
-        # Create the directory if it does not exist 
+        recipientDir = os.path.join('ClientFolders', recipient)
+        
+        # Create the recipient's directory if it does not exist
         if not os.path.exists(recipientDir):
             os.makedirs(recipientDir)
 
-        # Create the email file
-        title = email['Title'].replace(' ', '_')
-        # Create the filename
-        filename = f'{title}.txt'
-
-        # Store the email in the recipient's directory
+        # Write the email to a file
         try:
-            # Write the email to the file
             with open(os.path.join(recipientDir, filename), 'w') as emailFile:
                 emailFile.write(email['Content'])
-            
-            # Store the email in the recipient's inbox
+
+            # Store the email information in thhe format below
             emailData = {
                 'From': senderUsername,
                 'DateTime': email['Time and Date'],
-                'Title': email['Title']
+                'Title': title,
+                'Content Length': len(email['Content'])
             }
             
-            # Check if the recipient already has an inbox
-            if recipient in clientInboxes:
-                clientInboxes[recipient].append(emailData)
+            # Add the email to the recipient's inbox
+            clientInboxes[recipient].append(emailData)
         
         # Handle errors in storing the email
         except:
             print(f"Failed to store email for {recipient}")
-
-    writeClientInboxes(clientInboxes)  # Write updated inboxes
     
-    # Print statement for email sent confirmation
+    # Write the updated inboxes to the file
+    writeClientInboxes(clientInboxes)  
+    # Print the email send confirmation message to server
     print(f"An email from {senderUsername} is sent to {';'.join(recipients)} has a content length of {contentLength}")
 
 
@@ -221,27 +221,27 @@ def displayInboxList(connectionSocket, username, symKey):
     Return:
         - None
     """
-    # Read the client inboxes
+    # Read the client inboxes from the file
     clientInboxes = readClientInboxes()
-    
-    # Check if the username exists in clientInboxes
+    # Check if the client has an inbox
     if username in clientInboxes:
         inbox = clientInboxes[username]
-    # If not, create a new inbox for the user
+    # If the client does not have an inbox, create an empty one
     else:
         inbox = []
 
     # Format the inbox list
     inboxListFormatted = "Index From DateTime Title\n"
-    
-    # Loop through the emails in the inbox
+    # Add each email to the formatted list
     index = 1
     for email in inbox:
-        # Add the email information to the formatted inbox list
-        inboxListFormatted += f"{index} {email['From']} {email['DateTime']} {email['Title']}\n"
-        index += 1  # Increment the index
+        # Split sender and title
+        sender, title = email['From'], email['Title']
+        inboxListFormatted += f"{index} {sender} {email['DateTime']} {title}\n"
+        # Increment the index
+        index += 1
 
-    # Encrypt and send the formatted inbox list to the client
+    # Send the formatted inbox list to the client
     sendEncryptedMsg(connectionSocket, inboxListFormatted, symKey)
 
 def displayEmailContents(connectionSocket, username, symKey):
@@ -254,22 +254,41 @@ def displayEmailContents(connectionSocket, username, symKey):
     Return:
         - None
     """
-    # Prompting the client to enter the index of the email they wish to view
+    # Get the index of the email to be displayed
     sendEncryptedMsg(connectionSocket, "Enter email index:", symKey)
-    emailIndex = recvDecryptedMsg(connectionSocket, symKey)
+    emailIndex = int(recvDecryptedMsg(connectionSocket, symKey))
 
+    # Read the client inboxes from the file
+    clientInboxes = readClientInboxes()
+    
+    # Check if the client has an inbox
     try:
-        # Opening and reading the requested email file
-        emailFilename = os.path.join('ClientFolders', username, emailIndex)
-        with open(emailFilename, 'r') as emailFile:
-            emailContent = json.load(emailFile)
-            emailContentStr = json.dumps(emailContent, indent=4)
+        if username in clientInboxes and 0 < emailIndex <= len(clientInboxes[username]):
+            # Get the email information
+            emailInfo = clientInboxes[username][emailIndex - 1]
+            sender, title = emailInfo['From'], emailInfo['Title']
+            dateTime = emailInfo['DateTime']
+            contentLength = emailInfo['Content Length']
+            # Adjust the title to match the file name format
+            filename = f'{sender}_{title}.txt'
+            # Get the path to the email file
+            emailPath = os.path.join('ClientFolders', username, filename)
 
-            # Sending the email content to the client
+            # Read the email contents from the file
+            with open(emailPath, 'r') as emailFile:
+                content = emailFile.read()
+                # Format the email content
+                emailContentStr = f"From: {sender}\nTo: {username}\nTime and Date Received: {dateTime}\nTitle: {title}\nContent Length: {contentLength}\nContents:\n{content}"
+
+            # Send the formatted email content to the client
             sendEncryptedMsg(connectionSocket, emailContentStr, symKey)
-
+        
+        # Handle invalid email index
+        else:
+            sendEncryptedMsg(connectionSocket, "Invalid email index.", symKey)
+    
+    # Handle errors in reading the email
     except Exception as e:
-        # Handling errors in reading the email file
         sendEncryptedMsg(connectionSocket, f"Error reading email: {e}", symKey)
 
 def getChoice(connectionSocket, symKey):
