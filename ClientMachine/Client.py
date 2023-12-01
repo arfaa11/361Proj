@@ -215,9 +215,14 @@ def displayEmailContents(clientSocket, symKey):
         - symKey (bytes): The symmetric key for AES encryption.
     Return: None
     """
+    # Request the server to send the index prompt
     indexPrompt = decryptMessage(clientSocket.recv(1024), symKey)
+    print(indexPrompt)
+
+    # Get the email index from the user
     emailIndex = str(input())
-    # Request the server to send the contents of the specified email
+
+    # Send the email index to the server
     clientSocket.send(encryptMessage(emailIndex, symKey))
     
     # Receive and decrypt the email content from the server
