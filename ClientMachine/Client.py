@@ -188,7 +188,6 @@ def client():
     clientSocket.send(encryptedPass)
 
     # Receive and decrypt the symmetric key from the server
-    encryptedSymKey = clientSocket.recv(1025)
     encryptedSymKey = clientSocket.recv(1024)
     privateKey = loadPrivateKey(username)
 
