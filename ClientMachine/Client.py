@@ -164,23 +164,25 @@ def sendEmail(clientSocket, symKey, username):
     # Retrieve email details from the user
     destinations, title, content = getEmailDetails()
 
-    # Check if all email details are provided
     if destinations and title and content:
-        
-        # Structure the email into a dictionary
-        email = {
+        contentLength = str(len(content))
+        encryptedContentLength = encryptMessage(contentLength, symKey)
+        # Send content length first
+        clientSocket.send(encryptedContentLength)
+
+        # Prepare the email dictionary
+        emailDict = {
             "From": username,
             "To": destinations,
             "Title": title,
-            "Content Length": len(content),
             "Content": content
         }
 
         # Convert the email dictionary to a JSON string
-        email_json = json.dumps(email)
-        
+        emailJson = json.dumps(emailDict)
+        encryptedEmailJson = encryptMessage(emailJson, symKey)
         # Send the encrypted email JSON to the server
-        clientSocket.send(encryptMessage(email_json, symKey))
+        clientSocket.send(encryptedEmailJson)
         print("The message is sent to the server.")
     
     else:
@@ -306,9 +308,9 @@ def client():
             # Handle user choice
             match choice:
                 case '1':
-                    sendEmailRequest = clientSocket.recv(1024)
-                    sendEmailRequest = decryptMessage(sendEmailRequest, symKey)
-                    print(sendEmailRequest)
+                    #sendEmailRequest = clientSocket.recv(1024)
+                    #sendEmailRequest = decryptMessage(sendEmailRequest, symKey)
+                    #print(sendEmailRequest)
                     sendEmail(clientSocket, symKey, username)
                 case '2':
                     displayInboxList(clientSocket, symKey)

@@ -141,10 +141,10 @@ def processAndStoreEmail(email, senderUsername):
         if not os.path.exists(recipientDir):
             os.makedirs(recipientDir)
 
-        # Saving the email as a JSON file in the recipient's directory
-        emailFilename = f"{senderUsername}_{email['Title'].replace(' ', '_')}.json"
-        with open(os.path.join(recipientDir, emailFilename), 'w') as emailFile:
-            json.dump(email, emailFile)
+        # Store the email with TITLE as the filename and CONTENT as the file content
+        title = email['Title'].replace(' ', '_')
+        with open(f'{title}.txt', 'w') as emailFile:
+            emailFile.write(email['Content'])
 
         # Printing a success message
         print(f"Email from {senderUsername} to {recipient} stored successfully.")
@@ -164,10 +164,10 @@ def displayInboxList(connectionSocket, username, symKey):
 
     # Listing all files (emails) in the inbox directory
     inboxList = os.listdir(inboxDir) if os.path.exists(inboxDir) else []
-    inboxListStr = '\n'.join(inboxList)
+    #inboxListStr = '\n'.join(inboxList)
 
-    # Sending the list of emails to the client
-    sendEncryptedMsg(connectionSocket, inboxListStr, symKey)
+    inboxListFormatted = "Index From DateTime Title\n" + "\n".join([f"{idx} {email['From']} {email['Time and Date']} {email['Title']}" for idx, email in enumerate(inboxList)])
+    sendEncryptedMsg(connectionSocket, inboxListFormatted, symKey)
 
 def displayEmailContents(connectionSocket, username, symKey):
     """
@@ -237,11 +237,13 @@ def handleEmailOperations(connectionSocket, username, symKey):
         choice = getChoice(connectionSocket, symKey)
         match choice:
             case '1':
-                # Handling email creation and sending
-                sendEncryptedMsg(connectionSocket, "Send the email details", symKey)
-                email_json = recvDecryptedMsg(connectionSocket, symKey)
-                email = json.loads(email_json)
-                processAndStoreEmail(email, username)
+                # Receive content length
+                contentLength = int(recvDecryptedMsg(connectionSocket, symKey))
+                # Receive the rest of the email information
+                emailInfo = json.loads(recvDecryptedMsg(connectionSocket, symKey))
+                # Process and store email
+                emailInfo['Time and Date'] = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+                processAndStoreEmail(emailInfo, username)
             case '2':
             # Handling inbox listing
                 displayInboxList(connectionSocket, username, symKey)
