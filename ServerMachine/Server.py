@@ -166,11 +166,6 @@ def processAndStoreEmail(email, senderUsername):
     Return:
         - None
     """
-    # Receive content length first
-    contentLength = int(recvDecryptedMsg(connectionSocket, symKey))
-
-    # Receive the rest of the email information
-    emailInfo = json.loads(recvDecryptedMsg(connectionSocket, symKey))
 
     # Adding the current date and time to the email
     emailInfo['Time and Date'] = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -213,8 +208,6 @@ def processAndStoreEmail(email, senderUsername):
     
     # Write the updated inboxes to the file
     writeClientInboxes(clientInboxes)  
-    # Print the email send confirmation message to server
-    print(f"An email from {senderUsername} is sent to {';'.join(recipients)} has a content length of {contentLength}")
 
 
 def displayInboxList(connectionSocket, username, symKey):
@@ -338,7 +331,13 @@ def handleEmailOperations(connectionSocket, username, symKey):
         match choice:
             case '1':
             # Handling email creation and sending  
-                processAndStoreEmail(connectionSocket, username)
+                # Receive content length first
+                contentLength = int(recvDecryptedMsg(connectionSocket, symKey))
+                # Receive the rest of the email information
+                emailInfo = json.loads(recvDecryptedMsg(connectionSocket, symKey))
+                processAndStoreEmail(emailInfo, username)
+                # Print the email send confirmation message to server
+                print(f"An email from {senderUsername} is sent to {';'.join(recipients)} has a content length of {contentLength}")
             case '2':
             # Handling inbox listing
                 displayInboxList(connectionSocket, username, symKey)
