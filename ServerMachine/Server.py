@@ -245,7 +245,7 @@ def displayInboxList(connectionSocket, username, symKey):
     # Send the formatted inbox list to the client
     sendEncryptedMsg(connectionSocket, inboxListFormatted, symKey)
 
-def displayEmailContents(connectionSocket, username, symKey):
+def displayEmailContents(connectionSocket, username, emailIndex, symKey):
     """
     Purpose: Send the contents of a specific email to the client.
     Parameters:
@@ -255,10 +255,6 @@ def displayEmailContents(connectionSocket, username, symKey):
     Return:
         - None
     """
-    # Get the index of the email to be displayed
-    sendEncryptedMsg(connectionSocket, "Enter email index:", symKey)
-    emailIndex = int(recvDecryptedMsg(connectionSocket, symKey))
-
     # Read the client inboxes from the file
     clientInboxes = readClientInboxes()
     
@@ -345,7 +341,11 @@ def handleEmailOperations(connectionSocket, username, symKey):
                 displayInboxList(connectionSocket, username, symKey)
             case '3':
             # Handling displaying email contents
-                displayEmailContents(connectionSocket, username, symKey)
+                # Get the index of the email to be displayed
+                sendEncryptedMsg(connectionSocket, "Enter email index:", symKey)
+                emailIndex = int(recvDecryptedMsg(connectionSocket, symKey))
+                # Display the email contents
+                displayEmailContents(connectionSocket, username, emailIndex, symKey)
             case '4':
             # Handling connection termination
                 print(f"Terminating connection with {username}")
