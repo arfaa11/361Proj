@@ -265,7 +265,7 @@ def displayEmailContents(connectionSocket, username, emailIndex, symKey):
             emailInfo = clientInboxes[username][emailIndex - 1]
             sender, title = emailInfo['From'], emailInfo['Title']
             dateTime = emailInfo['DateTime']
-            receipients = emailInfo['To']
+            recipients = emailInfo['To']
             contentLength = emailInfo['Content Length']
             # Adjust the title to match the file name format
             filename = f'{sender}_{title}.txt'
@@ -276,18 +276,18 @@ def displayEmailContents(connectionSocket, username, emailIndex, symKey):
             with open(emailPath, 'r') as emailFile:
                 content = emailFile.read()
                 # Format the email content
-                emailContentStr = f"From: {sender}\nTo: {recipients}\nTime and Date Received: {dateTime}\nTitle: {title}\nContent Length: {contentLength}\nContents:\n{content}"
+                emailContentStr = f"\nFrom: {sender}\nTo: {recipients}\nTime and Date Received: {dateTime}\nTitle: {title}\nContent Length: {contentLength}\nContents:\n{content}"
 
             # Send the formatted email content to the client
             sendEncryptedMsg(connectionSocket, emailContentStr, symKey)
         
         # Handle invalid email index
         else:
-            sendEncryptedMsg(connectionSocket, "Invalid email index.", symKey)
+            sendEncryptedMsg(connectionSocket, "\nInvalid email index.", symKey)
     
     # Handle errors in reading the email
     except Exception as e:
-        sendEncryptedMsg(connectionSocket, f"Error reading email: {e}", symKey)
+        sendEncryptedMsg(connectionSocket, f"\nError reading email: {e}", symKey)
 
 def getChoice(connectionSocket, symKey):
     """
