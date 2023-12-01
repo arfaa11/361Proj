@@ -30,12 +30,18 @@ def loadPrivateKey(username):
         - RSA key: The client's private RSA key.
     """
     try:
+        # Open and read the private key file specific to the user
         with open(f'{username}_private.pem', 'rb') as privKeyFile:
             privKey = RSA.import_key(privKeyFile.read())
+        
+        # Return the RSA private key
         return privKey
     
     except FileNotFoundError:
+        # If the private key file is not found, print an error message
         print(f"Private key for {username} not found in directory")
+        
+        # Return None to indicate failure in key loading
         return None
     
 def loadPublicKey(username):
@@ -47,12 +53,18 @@ def loadPublicKey(username):
         - RSA key: The client's or server's public RSA key.
     """
     try:
+        # Open and read the public key file specific to the user
         with open(f'{username}_public.pem', 'rb') as pubKeyFile:
             pubKey = RSA.import_key(pubKeyFile.read())
+        
+        # Return the RSA public key
         return pubKey
     
     except FileNotFoundError:
+        # If the public key file is not found, print an error message
         print(f"Public key for {username} not found in directory")
+        
+        # Return None to indicate failure in key loading
         return None
     
 #------------------------------------------------------------------------------
@@ -67,7 +79,10 @@ def encryptMessage(message, key):
     Return:
         - bytes: The encrypted message.
     """
+    # Initialize AES cipher in ECB mode with symKey
     cipher = AES.new(key, AES.MODE_ECB)
+    
+    # Encrypt the message after padding, and return the encrypted bytes
     encryptedMsg = cipher.encrypt(pad(message.encode('ascii'), AES.block_size))
     return encryptedMsg
 
@@ -80,48 +95,79 @@ def decryptMessage(encryptedMsg, key):
     Return:
         - str: The decrypted message.
     """
+    # Check if the encrypted message is empty
     if not encryptedMsg:
+        # Raise a ValueError if the encrypted message is empty
         raise ValueError("The encrypted message is empty")
     
+    # Initialize AES cipher in ECB mode with symKey
     cipher = AES.new(key, AES.MODE_ECB)
+    
+    # Unpad and decrypt the message and return the decrypted bytes
     decryptedMsg = unpad(cipher.decrypt(encryptedMsg), AES.block_size)
     return decryptedMsg.decode('ascii')
 
 def getEmailDetails():
-    # Function to get email details from the user
+    """
+    Purpose: Get details of an email from the user, including recipients, title, and content.
+    Parameters: None
+    Return: Tuple of (destinations, title, content) or (None, None, None) if input is invalid.
+    """
+    # Prompt user to enter the email recipients, separated by semicolons
     destinations = input("Enter destinations (separated by ;): ")
+    # Prompt user to enter the email title
     title = input("Enter title: ")
 
+    # Check if title length exceeds 100 characters
     if len(title) > 100:
         print("Title exceeds 100 characters. Please retry.")
-        return None, None, None
+        return None, None, None  # Return None tuple if title is too long
     
+    # Ask user if they want to load email content from a file
     choice = input("Would you like to load contents from a file? (Y/N): ")
 
+    # If user chooses to load from a file
     if choice.lower() == 'y':
-        filename = input("Enter filename: ")
-        try:
-            with open(filename, 'r') as file:
-                content = file.read()
-
-        except FileNotFoundError:
-            print("File not found. Please retry.")
-            return None, None, None
+        filename = input("Enter filename: ")  # Ask for the filename
         
+        try:
+            # Try opening and reading the file
+            with open(filename, 'r') as file:
+                content = file.read()  # Read the file content
+        
+        except FileNotFoundError:
+            # Handle the case where the file does not exist
+            print("File not found. Please retry.")
+            return None, None, None  # Return None tuple if file not found
     else:
-        content = input("Enter message contents: ")
+        # If user chooses to manually enter content
+        content = input("Enter message contents: ")  # Prompt for email content
 
+    # Check if content length exceeds 1,000,000 characters
     if len(content) > 1000000:
         print("Content exceeds 1,000,000 characters. Please retry.")
-        return None, None, None
+        return None, None, None  # Return None tuple if content is too long
     
+    # Return the gathered email details
     return destinations, title, content
 
+
 def sendEmail(clientSocket, symKey, username):
-    # Function to send email
+    """
+    Purpose: Send an email from the user to specified recipients.
+    Parameters:
+        - clientSocket (socket): The socket connected to the server.
+        - symKey (bytes): The symmetric key for AES encryption.
+        - username (str): Sender's username.
+    Return: None
+    """
+    # Retrieve email details from the user
     destinations, title, content = getEmailDetails()
 
+    # Check if all email details are provided
     if destinations and title and content:
+        
+        # Structure the email into a dictionary
         email = {
             "From": username,
             "To": destinations,
@@ -130,25 +176,52 @@ def sendEmail(clientSocket, symKey, username):
             "Content": content
         }
 
+        # Convert the email dictionary to a JSON string
         email_json = json.dumps(email)
+        
+        # Send the encrypted email JSON to the server
         clientSocket.send(encryptMessage(email_json, symKey))
         print("The message is sent to the server.")
+    
     else:
+        # Inform the user that email sending is aborted if details are missing
         print("Email sending aborted.")
 
 def displayInboxList(clientSocket, symKey):
-    # Function for displaying inbox list
-    # Request inbox list from server
-    clientSocket.send(encryptMessage("2", symKey))  # '2' represents the choice for displaying inbox
+    """
+    Purpose: Request and display the list of emails in the user's inbox.
+    Parameters:
+        - clientSocket (socket): The socket connected to the server.
+        - symKey (bytes): The symmetric key for AES encryption.
+    Return: None
+    """
+    # Request the server to send the inbox list
+    clientSocket.send(encryptMessage("2", symKey))  # '2' is the menu option for inbox list
+    
+    # Receive and decrypt the inbox list from the server
     inboxList = decryptMessage(clientSocket.recv(1024), symKey)
+    
+    # Print the inbox list
     print("Inbox List:\n", inboxList)
 
 def displayEmailContents(clientSocket, symKey):
-    # Function to display the contents of a specific email
-    # Request specific email content from server
+    """
+    Purpose: Request and display the contents of a specific email.
+    Parameters:
+        - clientSocket (socket): The socket connected to the server.
+        - symKey (bytes): The symmetric key for AES encryption.
+    Return: None
+    """
+    # Prompt the user to enter the index of the email they wish to view
     emailIndex = input("Enter the email index you wish to view: ")
+    
+    # Request the server to send the contents of the specified email
     clientSocket.send(encryptMessage(emailIndex, symKey))
+    
+    # Receive and decrypt the email content from the server
     emailContent = decryptMessage(clientSocket.recv(1024), symKey)
+    
+    # Print the email content
     print("Email Content:\n", emailContent)
 
 #------------------------------------------------------------------------------
@@ -157,7 +230,7 @@ def displayEmailContents(clientSocket, symKey):
 def client():
     """
     Main client function to handle the connection and communication with the server.
-    It handles user authentication and subsequent mail operations.
+    It handles user authentication and all mail operations.
     """
     # Server IP address and port number
     serverIP = input("Enter the server IP or name: ")
@@ -218,6 +291,7 @@ def client():
 
         # Send OK to server
         clientSocket.send(encryptMessage("OK", symKey))
+        
         # Start the user interaction loop
         while True:
             # Receive menu from server
