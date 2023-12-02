@@ -268,7 +268,6 @@ def checkForMaxAttempts(clientSocket, username):
         else:
             # Close the client socket and return True if the user is still blocked
             clientSocket.close()
-            print("You are currently blocked. Please try again later.")
             return True
 
     # Increment attempts for unblocked users
@@ -287,7 +286,7 @@ def checkForMaxAttempts(clientSocket, username):
         # Close the client socket and return True if the user is blocked
         clientSocket.close()
         # Print a message to the user
-        print("You have exceeded the maximum number of attempts. Please try again later.")
+        print("You have exceeded the maximum number of attempts. Please try again in 5 minutes.")
         with open("attemptCounter.json", "w") as attemptCounterFile:
             json.dump(attemptCounter, attemptCounterFile)
         return True
@@ -345,6 +344,7 @@ def enhancedClient():
     
     # Check if the user is blocked
     if isUserBlocked(username):
+        print("You are currently blocked. Please try again later.")
         return
 
     encryptedUser = cipher.encrypt(username.encode('ascii'))
