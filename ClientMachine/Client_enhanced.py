@@ -238,58 +238,81 @@ def checkForMaxAttempts(clientSocket, username):
         - username (str): The username of the client.
     Return: True if the user is blocked, False otherwise.
     """
-    # Load the attempt counter data
     with open("attemptCounter.json", "r") as attemptCounterFile:
         attemptCounter = json.load(attemptCounterFile)
 
-    # Check if the username is in the attempt counter
     if username not in attemptCounter:
-        attemptCounter[username] = {'attempts': 0, 'blockedFlag': 0}
+        return False
 
-    # Check if the user is blocked
+    blocked_at = None
+
+    # Check if the user is currently blocked and if 5 minutes have passed
     if attemptCounter[username]['blockedFlag']:
-        blocked_at = None
-
-        # Check if the user is blocked for more than 5 minutes
         if os.path.exists("blockedUsers.txt"):
             with open("blockedUsers.txt", "r") as blockedUsersFile:
+                # Iterate through each line in the file
                 for line in blockedUsersFile:
+                    # Check if the line contains the username
                     if username in line:
-                        blocked_at_str = line.split(' blocked at ')[-1]
+                        blocked_at_str = line.split(' was blocked at ')[-1]
                         blocked_at = dt.datetime.strptime(blocked_at_str, '%Y-%m-%d %H:%M:%S.%f')
                         break
         
-        # Unblock the user if the user is blocked for more than 5 minutes
+        # Unblock the user if 5 minutes have passed
         if blocked_at and (dt.datetime.now() - blocked_at).total_seconds() > 300:
             attemptCounter[username] = {'attempts': 0, 'blockedFlag': 0}
-        # Otherwise, close the client socket and return True
+            # Write the updated attemptCounter to the file
+            with open("attemptCounter.json", "w") as attemptCounterFile:
+                json.dump(attemptCounter, attemptCounterFile)
+            return False
         else:
+            # Close the client socket and return True if the user is still blocked
             clientSocket.close()
             print("You are currently blocked. Please try again later.")
             return True
-    
-    # Otherwise, increment the attempt counter
+
+    # Increment attempts for unblocked users
     attemptCounter[username]['attempts'] += 1
 
-    # Check if the user has exceeded the maximum number of attempts
-    if attemptCounter[username]['attempts'] >= 6:
-        # Block the user if the user has exceeded the maximum number of attempts
-        if not attemptCounter[username]['blockedFlag']:
-            attemptCounter[username]['blockedFlag'] = 1
-            # Write to blockedUsers.txt
-            with open("blockedUsers.txt", "a") as blockedUsersFile:
-                current_time_str = dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
-                blockedUsersFile.write(f"{username} blocked at {current_time_str}\n")
-            # Close the client socket and return True
-            clientSocket.close()
-            print("You have exceeded the maximum number of attempts. Please try again later.")
-            return True
+    # Block the user on the 5th failed attempt
+    if attemptCounter[username]['attempts'] >= 5:
+        attemptCounter[username] = {'attempts': 0, 'blockedFlag': 1}
+        with open("blockedUsers.txt", "a") as blockedUsersFile:
+            # Check if the user is already blocked
+            if isUserBlocked(username):
+                return True
+            # Write the username and time to the blockedUsers.txt file
+            current_time_str = dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
+            blockedUsersFile.write(f"{username} was blocked at {current_time_str}\n")
+        # Close the client socket and return True if the user is blocked
+        clientSocket.close()
+        # Print a message to the user
+        print("You have exceeded the maximum number of attempts. Please try again later.")
+        with open("attemptCounter.json", "w") as attemptCounterFile:
+            json.dump(attemptCounter, attemptCounterFile)
+        return True
 
-    # Write the updated attempt counter data
+    # Write the updated attemptCounter to the file
     with open("attemptCounter.json", "w") as attemptCounterFile:
         json.dump(attemptCounter, attemptCounterFile)
 
     # Return False if the user is not blocked
+    return False
+
+def isUserBlocked(username):
+    """
+    Purpose: Check if the user is blocked.
+    Parameters:
+        - username (str): The username of the client.
+    Return: True if the user is blocked, False otherwise."""
+    # Check if the blockedUsers.txt file exists
+    if os.path.exists("blockedUsers.txt"):
+        with open("blockedUsers.txt", "r") as blockedUsersFile:
+            # Iterate through each line in the file
+            for line in blockedUsersFile:
+                # Check if the line contains the username
+                if username in line:
+                    return True
     return False
 #------------------------------------------------------------------------------
 # Main client function
@@ -320,9 +343,8 @@ def enhancedClient():
         print("Username or password too long for RSA encryption.")
         return
     
-    # Check if the user has exceeded the maximum number of attempts
-    if checkForMaxAttempts(clientSocket, username):
-        # Close the client socket
+    # Check if the user is blocked
+    if isUserBlocked(username):
         return
 
     encryptedUser = cipher.encrypt(username.encode('ascii'))
@@ -349,6 +371,7 @@ def enhancedClient():
 
     if serverResponse == b"FAILURE":
         print("Invalid username or password.\nTerminating.")
+        checkForMaxAttempts(clientSocket, username) # Check for max attempts
         clientSocket.close()
         return
     
