@@ -5,7 +5,7 @@ Student names: - Arfaa Mumtaz
                - Olasubomi Badiru
 Instructor name: Mahdi Firoozjaei
 Assignment: Secure Mail Transfer Project
-Program name: Client.py
+Program name: Client_enhanced.py
 Program purpose: <TODO>
 '''
 
@@ -291,7 +291,7 @@ def checkForMaxAttempts(clientSocket, username):
 #------------------------------------------------------------------------------
 # Main client function
 #------------------------------------------------------------------------------
-def client():
+def enhancedClient():
     """
     Main client function to handle the connection and communication with the server.
     It handles user authentication and all mail operations.
@@ -318,7 +318,7 @@ def client():
         return
     
     checkForMaxAttempts(clientSocket, username)
-    
+
     encryptedUser = cipher.encrypt(username.encode('ascii'))
     encryptedPass = cipher.encrypt(password.encode('ascii'))
 
@@ -392,4 +392,4 @@ def client():
 # Run program
 #------------------------------------------------------------------------------
 if __name__ == "__main__":
-    client()
+    enhancedClient()

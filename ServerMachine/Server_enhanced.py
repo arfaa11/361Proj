@@ -5,7 +5,7 @@ Student names: - Arfaa Mumtaz
                - Olasubomi Badiru
 Instructor name: Mahdi Firoozjaei
 Assignment: Secure Mail Transfer Project
-Program name: Server.py
+Program name: Server_enhanced.py
 Program purpose: <TODO>
 '''
 # ------------------------------------------------------------------------------
@@ -405,7 +405,7 @@ def handleClient(connectionSocket):
     connectionSocket.close()
 
 # Main function to start and run the server
-def server():
+def enhancedServer():
     """
     Purpose: Initialize and run the email server, listening for client connections.
     Return:
@@ -435,4 +435,4 @@ def server():
 
 # Run the server program
 if __name__ == "__main__":
-    server()
+    enhancedServer()
