@@ -344,6 +344,7 @@ def enhancedClient():
     
     # Check if the user is blocked
     if isUserBlocked(username):
+        checkForMaxAttempts(clientSocket, username) # Check to see if client needs to be unblocked
         print("You are currently blocked. Please try again later.")
         return
 
