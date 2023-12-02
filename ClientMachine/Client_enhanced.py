@@ -265,7 +265,7 @@ def checkForMaxAttempts(clientSocket, username):
         else:
             clientSocket.close()
             print("You are currently blocked. Please try again later.")
-            return False
+            return True
 
     # Increment the number of attempts
     attemptCounter[username]['attempts'] += 1
@@ -284,13 +284,13 @@ def checkForMaxAttempts(clientSocket, username):
         # Close the client socket
         clientSocket.close()
         print("You have exceeded the maximum number of attempts. Please try again later.")
-        return False
+        return True
 
     # Write the new data to the attemptCounter.json file
     with open("attemptCounter.json", "w") as attemptCounterFile:
         json.dump(attemptCounter, attemptCounterFile)
 
-    return True
+    return False
 #------------------------------------------------------------------------------
 # Main client function
 #------------------------------------------------------------------------------
