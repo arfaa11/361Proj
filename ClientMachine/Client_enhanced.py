@@ -265,30 +265,32 @@ def checkForMaxAttempts(clientSocket, username):
         else:
             clientSocket.close()
             print("You are currently blocked. Please try again later.")
-            return True
+            return False
 
     # Increment the number of attempts
     attemptCounter[username]['attempts'] += 1
 
     # Check if the number of attempts is 6
-    if attemptCounter[username]['attempts'] == 6:
-        # Set the blocked flag and reset attempts
-        attemptCounter[username] = {'attempts': 0, 'blockedFlag': 1}
-        # Write to blockedUsers.txt
-        with open("blockedUsers.txt", "a") as blockedUsersFile:
-            current_time_str = dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
-            blockedUsersFile.write(f"{username} blocked at {current_time_str}\n")
+    if attemptCounter[username]['attempts'] >= 6:
+        # Set the blocked flag
+        attemptCounter[username]['blockedFlag'] = 1
+
+        # Write to blockedUsers.txt only if this is a new block
+        if not blocked_at:
+            with open("blockedUsers.txt", "a") as blockedUsersFile:
+                current_time_str = dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
+                blockedUsersFile.write(f"{username} blocked at {current_time_str}\n")
+
         # Close the client socket
         clientSocket.close()
         print("You have exceeded the maximum number of attempts. Please try again later.")
-        return True
+        return False
 
     # Write the new data to the attemptCounter.json file
     with open("attemptCounter.json", "w") as attemptCounterFile:
         json.dump(attemptCounter, attemptCounterFile)
 
-    return False
-
+    return True
 #------------------------------------------------------------------------------
 # Main client function
 #------------------------------------------------------------------------------
