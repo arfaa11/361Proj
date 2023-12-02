@@ -248,18 +248,33 @@ def checkForMaxAttempts(clientSocket, username):
 
     # Check if the user is currently blocked and if 5 minutes have passed
     if attemptCounter[username]['blockedFlag']:
+        lines_to_keep = []
+        user_unblocked = False
+
         if os.path.exists("blockedUsers.txt"):
             with open("blockedUsers.txt", "r") as blockedUsersFile:
-                # Iterate through each line in the file
                 for line in blockedUsersFile:
-                    # Check if the line contains the username
                     if username in line:
-                        blocked_at_str = line.split(' was blocked at ')[-1]
-                        blocked_at = dt.datetime.strptime(blocked_at_str, '%Y-%m-%d %H:%M:%S.%f')
-                        break
-        
-        # Unblock the user if 5 minutes have passed
-        if blocked_at and (dt.datetime.now() - blocked_at).total_seconds() > 300:
+                        try:
+                            blocked_at_str = line.split(' was blocked at ')[-1].strip()
+                            blocked_at = dt.datetime.strptime(blocked_at_str, '%Y-%m-%d %H:%M:%S.%f')
+                        except ValueError:
+                            # Handle possible formatting errors
+                            continue
+
+                        if (dt.datetime.now() - blocked_at).total_seconds() > 300:
+                            # User is unblocked, do not keep this line
+                            user_unblocked = True
+                            continue
+
+                    # Keep other lines or lines where block period has not expired
+                    lines_to_keep.append(line)
+
+            # Rewrite the file without the unblocked user's line
+            with open("blockedUsers.txt", "w") as blockedUsersFile:
+                blockedUsersFile.writelines(lines_to_keep)
+
+        if user_unblocked:
             attemptCounter[username] = {'attempts': 0, 'blockedFlag': 0}
             # Write the updated attemptCounter to the file
             with open("attemptCounter.json", "w") as attemptCounterFile:
