@@ -1,1 +1,7 @@
-{"client1": [], "client2": [], "client3": [], "client4": [], "client5": []}
+{
+    "client1": {"attempts": 0, "blockedTime": null},
+    "client2": {"attempts": 0, "blockedTime": null},
+    "client3": {"attempts": 0, "blockedTime": null},
+    "client4": {"attempts": 0, "blockedTime": null},
+    "client5": {"attempts": 0, "blockedTime": null}
+  }
