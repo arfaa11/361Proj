@@ -15,6 +15,7 @@ Program purpose: <TODO>
 import socket
 import json
 import datetime as dt
+import os
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP, AES
 from Crypto.Util.Padding import pad, unpad
@@ -231,40 +232,37 @@ def displayEmailContents(clientSocket, symKey):
 
 def checkForMaxAttempts(clientSocket, username):
     """
-    Purpose: Check if the user has exceeded the maximum number of attempts. If
-        yes, close the connection for a given period of time
+    Purpose: Check if the user has exceeded the maximum number of attempts.
     Parameters:
         - clientSocket (socket): The socket connected to the server.
         - username (str): The username of the client.
-    Return:
+    Return: True if the user is blocked, False otherwise.
     """
     # Load the attempt counter data
     with open("attemptCounter.json", "r") as attemptCounterFile:
         attemptCounter = json.load(attemptCounterFile)
 
-    # Check if the username is already in the attemptCounter
+    # Initialize client data if not present
     if username not in attemptCounter:
-        attemptCounter[username] = {'attempts': 0, 'blockedTime': None}
+        attemptCounter[username] = {'attempts': 0, 'blockedFlag': 0}
 
-    # Check if the user is currently blocked and if 5 minutes have passed
-    if attemptCounter[username]['blockedTime']:
-        blocked_time = dt.datetime.fromisoformat(attemptCounter[username]['blockedTime'])
-        current_time = dt.datetime.now()
-        # Calculate the difference in minutes
-        difference_in_minutes = (current_time - blocked_time).total_seconds() / 60
+    # Check if the user is currently blocked
+    if attemptCounter[username]['blockedFlag']:
+        blocked_at = None
 
-        if difference_in_minutes > 5:
-            # Unblock the user
-            attemptCounter[username] = {'attempts': 0, 'blockedTime': None}
-            # Remove the user from the blockedUsers.txt file
-            with open("blockedUsers.txt", "r") as file:
-                lines = file.readlines()
-            with open("blockedUsers.txt", "w") as file:
-                for line in lines:
-                    if line.strip("\n") != username:
-                        file.write(line)
+        # Check if the blockedUsers.txt file exists
+        if os.path.exists("blockedUsers.txt"):
+            with open("blockedUsers.txt", "r") as blockedUsersFile:
+                for line in blockedUsersFile:
+                    if username in line:
+                        blocked_at_str = line.split(' blocked at ')[-1]
+                        blocked_at = dt.datetime.strptime(blocked_at_str, '%Y-%m-%d %H:%M:%S.%f')
+                        break
+
+        if blocked_at and (dt.datetime.now() - blocked_at).total_seconds() > 300:
+            # Reset attempt counter and blocked flag
+            attemptCounter[username] = {'attempts': 0, 'blockedFlag': 0}
         else:
-            # User is still blocked
             clientSocket.close()
             print("You are currently blocked. Please try again later.")
             return True
@@ -272,29 +270,24 @@ def checkForMaxAttempts(clientSocket, username):
     # Increment the number of attempts
     attemptCounter[username]['attempts'] += 1
 
-    # Check if the number of attempts is greater than 5
-    if attemptCounter[username]['attempts'] > 5:
-        # Block the user
-        attemptCounter[username]['attempts'] = 0
-        attemptCounter[username]['blockedTime'] = dt.datetime.now().isoformat()
-
-        # Check if the user is already in blockedUsers.txt
-        with open("blockedUsers.txt", "r") as blockedUsersFile:
-            blockedUsers = blockedUsersFile.read().splitlines()
-
-        if username not in blockedUsers:
-            with open("blockedUsers.txt", "a") as blockedUsersFile:
-                blockedUsersFile.write(f"{username}\n")
-
-        # Close the client socket and indicate blocking
+    # Check if the number of attempts is 6
+    if attemptCounter[username]['attempts'] == 6:
+        # Set the blocked flag and reset attempts
+        attemptCounter[username] = {'attempts': 0, 'blockedFlag': 1}
+        # Write to blockedUsers.txt
+        with open("blockedUsers.txt", "a") as blockedUsersFile:
+            current_time_str = dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
+            blockedUsersFile.write(f"{username} blocked at {current_time_str}\n")
+        # Close the client socket
         clientSocket.close()
         print("You have exceeded the maximum number of attempts. Please try again later.")
         return True
-    else:
-        # Write the new data to the attemptCounter.json file
-        with open("attemptCounter.json", "w") as attemptCounterFile:
-            json.dump(attemptCounter, attemptCounterFile)
-        return False
+
+    # Write the new data to the attemptCounter.json file
+    with open("attemptCounter.json", "w") as attemptCounterFile:
+        json.dump(attemptCounter, attemptCounterFile)
+
+    return False
 
 #------------------------------------------------------------------------------
 # Main client function

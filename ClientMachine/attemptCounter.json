@@ -1,7 +1,7 @@
 {
-    "client1": {"attempts": 0, "blockedTime": null},
-    "client2": {"attempts": 0, "blockedTime": null},
-    "client3": {"attempts": 0, "blockedTime": null},
-    "client4": {"attempts": 0, "blockedTime": null},
-    "client5": {"attempts": 0, "blockedTime": null}
+    "client1": {"attempts": 0, "blockedFlag": 0},
+    "client2": {"attempts": 0, "blockedFlag": 0},
+    "client3": {"attempts": 0, "blockedFlag": 0},
+    "client4": {"attempts": 0, "blockedFlag": 0},
+    "client5": {"attempts": 0, "blockedFlag": 0}
 }
