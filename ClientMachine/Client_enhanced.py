@@ -267,7 +267,7 @@ def checkForMaxAttempts(clientSocket, username):
             # User is still blocked
             clientSocket.close()
             print("You are currently blocked. Please try again later.")
-            return
+            return True
 
     # Increment the number of attempts
     attemptCounter[username]['attempts'] += 1
@@ -283,10 +283,12 @@ def checkForMaxAttempts(clientSocket, username):
         # Close the client socket
         clientSocket.close()
         print("You have exceeded the maximum number of attempts. Please try again later.")
+        return True
     else:
         # Write the new data to the attemptCounter.json file
         with open("attemptCounter.json", "w") as attemptCounterFile:
             json.dump(attemptCounter, attemptCounterFile)
+        return False
 
 #------------------------------------------------------------------------------
 # Main client function
@@ -317,7 +319,10 @@ def enhancedClient():
         print("Username or password too long for RSA encryption.")
         return
     
-    checkForMaxAttempts(clientSocket, username)
+    # Check if the user has exceeded the maximum number of attempts
+    if checkForMaxAttempts(clientSocket, username):
+        # Close the client socket
+        return
 
     encryptedUser = cipher.encrypt(username.encode('ascii'))
     encryptedPass = cipher.encrypt(password.encode('ascii'))
