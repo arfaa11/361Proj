@@ -246,6 +246,9 @@ def checkForMaxAttempts(clientSocket, username):
     if username not in attemptCounter:
         attemptCounter[username] = {'attempts': 0, 'blockedFlag': 0}
 
+    # Initialize blocked_at variable
+    blocked_at = None
+
     # Check if the user is currently blocked
     if attemptCounter[username]['blockedFlag']:
         blocked_at = None
