@@ -277,10 +277,16 @@ def checkForMaxAttempts(clientSocket, username):
         # Block the user
         attemptCounter[username]['attempts'] = 0
         attemptCounter[username]['blockedTime'] = dt.datetime.now().isoformat()
-        # Write to blockedUsers.txt
-        with open("blockedUsers.txt", "a") as blockedUsersFile:
-            blockedUsersFile.write(f"{username}\n")
-        # Close the client socket
+
+        # Check if the user is already in blockedUsers.txt
+        with open("blockedUsers.txt", "r") as blockedUsersFile:
+            blockedUsers = blockedUsersFile.read().splitlines()
+
+        if username not in blockedUsers:
+            with open("blockedUsers.txt", "a") as blockedUsersFile:
+                blockedUsersFile.write(f"{username}\n")
+
+        # Close the client socket and indicate blocking
         clientSocket.close()
         print("You have exceeded the maximum number of attempts. Please try again later.")
         return True
