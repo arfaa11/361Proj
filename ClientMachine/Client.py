@@ -118,10 +118,9 @@ def getEmailDetails():
     # Prompt user to enter the email title
     title = input("Enter title: ")
 
-    # Check if title length exceeds 100 characters
-    if len(title) > 100:
-        print("Title exceeds 100 characters. Please retry.")
-        return None, None, None  # Return None tuple if title is too long
+    # Check if title length exceeds 10 characters
+    while len(title) > 100:
+        title = input("Title exceeds 100 characters. Please retry: ")
     
     # Ask user if they want to load email content from a file
     choice = input("Would you like to load contents from a file? (Y/N): ")
@@ -134,7 +133,12 @@ def getEmailDetails():
             # Try opening and reading the file
             with open(filename, 'r') as file:
                 content = file.read()  # Read the file content
-        
+
+            while len(content) > 1000000:
+                filename = input("Content exceeds 1,000,000 characters. Please retry with different file: ")
+                with open(filename, 'r') as file:
+                    content = file.read()  # Read the file content
+            
         except FileNotFoundError:
             # Handle the case where the file does not exist
             print("File not found. Please retry.")
@@ -164,23 +168,25 @@ def sendEmail(clientSocket, symKey, username):
     # Retrieve email details from the user
     destinations, title, content = getEmailDetails()
 
-    # Check if all email details are provided
     if destinations and title and content:
-        
-        # Structure the email into a dictionary
-        email = {
+        contentLength = str(len(content))
+        encryptedContentLength = encryptMessage(contentLength, symKey)
+        # Send content length first
+        clientSocket.send(encryptedContentLength)
+
+        # Prepare the email dictionary
+        emailDict = {
             "From": username,
             "To": destinations,
             "Title": title,
-            "Content Length": len(content),
             "Content": content
         }
 
         # Convert the email dictionary to a JSON string
-        email_json = json.dumps(email)
-        
+        emailJson = json.dumps(emailDict)
+        encryptedEmailJson = encryptMessage(emailJson, symKey)
         # Send the encrypted email JSON to the server
-        clientSocket.send(encryptMessage(email_json, symKey))
+        clientSocket.send(encryptedEmailJson)
         print("The message is sent to the server.")
     
     else:
@@ -195,9 +201,6 @@ def displayInboxList(clientSocket, symKey):
         - symKey (bytes): The symmetric key for AES encryption.
     Return: None
     """
-    # Request the server to send the inbox list
-    clientSocket.send(encryptMessage("2", symKey))  # '2' is the menu option for inbox list
-    
     # Receive and decrypt the inbox list from the server
     inboxList = decryptMessage(clientSocket.recv(1024), symKey)
     
@@ -212,17 +215,21 @@ def displayEmailContents(clientSocket, symKey):
         - symKey (bytes): The symmetric key for AES encryption.
     Return: None
     """
-    # Prompt the user to enter the index of the email they wish to view
-    emailIndex = input("Enter the email index you wish to view: ")
-    
-    # Request the server to send the contents of the specified email
-    clientSocket.send(encryptMessage(emailIndex, symKey))
-    
-    # Receive and decrypt the email content from the server
-    emailContent = decryptMessage(clientSocket.recv(1024), symKey)
-    
-    # Print the email content
-    print("Email Content:\n", emailContent)
+    # Request the server to send the index prompt
+    serverRequest = decryptMessage(clientSocket.recv(1024), symKey)
+    # Check if the server request is the email index prompt
+    if serverRequest == "the server request email index":
+        # Prompt user to enter the email index
+        emailIndex = str(input("Enter the email index you wish to view: "))
+
+        # Send the email index to the server
+        clientSocket.send(encryptMessage(emailIndex, symKey))
+        
+        # Receive and decrypt the email content from the server
+        emailContent = decryptMessage(clientSocket.recv(1024), symKey)
+        
+        # Print the email content
+        print("Email Content:\n", emailContent)
 
 #------------------------------------------------------------------------------
 # Main client function
@@ -306,9 +313,6 @@ def client():
             # Handle user choice
             match choice:
                 case '1':
-                    sendEmailRequest = clientSocket.recv(1024)
-                    sendEmailRequest = decryptMessage(sendEmailRequest, symKey)
-                    print(sendEmailRequest)
                     sendEmail(clientSocket, symKey, username)
                 case '2':
                     displayInboxList(clientSocket, symKey)
