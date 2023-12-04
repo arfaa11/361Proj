@@ -131,10 +131,9 @@ def getEmailDetails():
     # Prompt user to enter the email title
     title = input("Enter title: ")
 
-    # Check if title length exceeds 100 characters
-    if len(title) > 100:
-        print("Title exceeds 100 characters. Please retry.")
-        return None, None, None  # Return None tuple if title is too long
+    # Check if title length exceeds 10 characters
+    while len(title) > 100:
+        title = input("Title exceeds 100 characters. Please retry: ")
     
     # Ask user if they want to load email content from a file
     choice = input("Would you like to load contents from a file? (Y/N): ")
@@ -147,7 +146,12 @@ def getEmailDetails():
             # Try opening and reading the file
             with open(filename, 'r') as file:
                 content = file.read()  # Read the file content
-        
+
+            while len(content) > 1000000:
+                filename = input("Content exceeds 1,000,000 characters. Please retry with different file: ")
+                with open(filename, 'r') as file:
+                    content = file.read()  # Read the file content
+            
         except FileNotFoundError:
             # Handle the case where the file does not exist
             print("File not found. Please retry.")
