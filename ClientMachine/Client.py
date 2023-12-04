@@ -6,7 +6,12 @@ Student names: - Arfaa Mumtaz
 Instructor name: Mahdi Firoozjaei
 Assignment: Secure Mail Transfer Project
 Program name: Client.py
-Program purpose: <TODO>
+Program purpose: This is the client side to our secure mail transfer program.
+A (known) client will connect to the server via TCP connections and communicate
+using symmetric key cryptography. Messages between the client and server will
+be encrypted to secure each transfer using AES (advanced encryption standard)
+and ECB mode (electronic code book).The client will be able to send emails to 
+other known clients, view their inbox, and read the contents in their emails.
 '''
 
 #------------------------------------------------------------------------------
