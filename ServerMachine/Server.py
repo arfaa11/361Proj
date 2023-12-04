@@ -8,6 +8,9 @@ Assignment: Secure Mail Transfer Project
 Program name: Server.py
 Program purpose: <TODO>
 '''
+# ------------------------------------------------------------------------------
+# Import statements
+# ------------------------------------------------------------------------------
 import json
 import socket
 import os
@@ -41,6 +44,40 @@ for username in user_passData:
     # Load and store each client's public RSA key
     with open(f'{username}_public.pem', 'rb') as pubKeyFile:
         clientPubKeys[username] = RSA.import_key(pubKeyFile.read())
+
+# ------------------------------------------------------------------------------
+# Access the clientInboxes.json dictionary
+# ------------------------------------------------------------------------------
+def readClientInboxes():
+    """
+    Purpose: Read the client inboxes from the clientInboxes.json file.
+    Parameters:
+        - None
+    Return:
+        - dict: The client inboxes dictionary.
+    """
+    # Check if the clientInboxes.json file exists
+    try:
+        # Read the client inboxes from the file
+        with open('clientInboxes.json', 'r') as file:
+            # Return the client inboxes dictionary
+            return json.load(file)
+    # If the file does not exist, return an empty dictionary
+    except FileNotFoundError:
+        # Return an empty dictionary
+        return {'client1': [], 'client2': [], 'client3': [], 'client4': [], 'client5': []}
+    
+def writeClientInboxes(clientInboxes):
+    """
+    Purpose: Write the client inboxes to the clientInboxes.json file.
+    Parameters:
+        - clientInboxes (dict): The client inboxes dictionary.
+    Return:
+        - None
+    """
+    # Write the client inboxes to the file
+    with open('clientInboxes.json', 'w') as file:
+        json.dump(clientInboxes, file)
 
 # ------------------------------------------------------------------------------
 # Helper functions for server
@@ -129,25 +166,51 @@ def processAndStoreEmail(email, senderUsername):
     Return:
         - None
     """
+    clientInboxes = readClientInboxes()  # Read current inboxes
+
     # Adding the current date and time to the email
     email['Time and Date'] = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    # Processing each recipient in the email
     recipients = email['To'].split(';')
 
+    contentLength = len(email['Content'])
+    # Define the file name format
+    title = email['Title'].replace(' ', '_')
+    # Format: <senderUsername>_<emailTitle>.txt
+    filename = f'{senderUsername}_{title}.txt'
+
+    # Store the email in the recipient's directory
     for recipient in recipients:
-        # Creating a directory for the recipient if it does not exist
         recipientDir = os.path.join('ClientFolders', recipient)
+        
+        # Create the recipient's directory if it does not exist
         if not os.path.exists(recipientDir):
             os.makedirs(recipientDir)
 
-        # Saving the email as a JSON file in the recipient's directory
-        emailFilename = f"{senderUsername}_{email['Title'].replace(' ', '_')}.json"
-        with open(os.path.join(recipientDir, emailFilename), 'w') as emailFile:
-            json.dump(email, emailFile)
+        # Write the email to a file
+        try:
+            with open(os.path.join(recipientDir, filename), 'w') as emailFile:
+                emailFile.write(email['Content'])
 
-        # Printing a success message
-        print(f"Email from {senderUsername} to {recipient} stored successfully.")
+            # Store the email information in thhe format below
+            emailData = {
+                'From': senderUsername,
+                'DateTime': email['Time and Date'],
+                'Title': title,
+                'Content Length': len(email['Content'])
+            }
+            
+            # Add the email to the recipient's inbox
+            clientInboxes[recipient].append(emailData)
+        
+        # Handle errors in storing the email
+        except:
+            print(f"Failed to store email for {recipient}")
+    
+    # Write the updated inboxes to the file
+    writeClientInboxes(clientInboxes)  
+    # Print the email send confirmation message to server
+    print(f"An email from {senderUsername} is sent to {';'.join(recipients)} has a content length of {contentLength}")
+
 
 def displayInboxList(connectionSocket, username, symKey):
     """
@@ -159,17 +222,35 @@ def displayInboxList(connectionSocket, username, symKey):
     Return:
         - None
     """
-    # Locating the inbox directory of the client
-    inboxDir = os.path.join('ClientFolders', username)
+    # Read the client inboxes from the file
+    clientInboxes = readClientInboxes()
+    # Check if the client has an inbox
+    if username in clientInboxes:
+        inbox = clientInboxes[username]
+    # If the client does not have an inbox, create an empty one
+    else:
+        inbox = []
 
-    # Listing all files (emails) in the inbox directory
-    inboxList = os.listdir(inboxDir) if os.path.exists(inboxDir) else []
-    inboxListStr = '\n'.join(inboxList)
+    # Format the inbox list header
+    inboxListFormatted = "\n{:<10}{:<10}{:<25}{:<100}\n".format("Index", "From", "DateTime", "Title")
 
-    # Sending the list of emails to the client
-    sendEncryptedMsg(connectionSocket, inboxListStr, symKey)
+    # Add each email to the formatted list
+    index = 1
+    for email in inbox:
+        # Split sender and title
+        sender, title = email['From'], email['Title']
+        dateTime = email['DateTime']
 
-def displayEmailContents(connectionSocket, username, symKey):
+        # Add formatted email information to the list
+        inboxListFormatted += "{:<10}{:<10}{:<25}{:<100}\n".format(str(index), sender, dateTime, title)
+
+        # Increment the index
+        index += 1
+
+    # Send the formatted inbox list to the client
+    sendEncryptedMsg(connectionSocket, inboxListFormatted, symKey)
+
+def displayEmailContents(connectionSocket, username, emailIndex, symKey):
     """
     Purpose: Send the contents of a specific email to the client.
     Parameters:
@@ -179,23 +260,42 @@ def displayEmailContents(connectionSocket, username, symKey):
     Return:
         - None
     """
-    # Prompting the client to enter the index of the email they wish to view
-    sendEncryptedMsg(connectionSocket, "Enter email index:", symKey)
-    emailIndex = recvDecryptedMsg(connectionSocket, symKey)
-
+    # Read the client inboxes from the file
+    clientInboxes = readClientInboxes()
+    
+    # Check if the client has an inbox
     try:
-        # Opening and reading the requested email file
-        emailFilename = os.path.join('ClientFolders', username, emailIndex)
-        with open(emailFilename, 'r') as emailFile:
-            emailContent = json.load(emailFile)
-            emailContentStr = json.dumps(emailContent, indent=4)
+        if username in clientInboxes and 0 < emailIndex <= len(clientInboxes[username]):
+            # Get the email information
+            emailInfo = clientInboxes[username][emailIndex - 1]
+            sender, title = emailInfo['From'], emailInfo['Title']
+            dateTime = emailInfo['DateTime']
+            #recipients = emailInfo['To']
+            contentLength = emailInfo['Content Length']
+            
+            # Adjust the title to match the file name format
+            filename = f'{sender}_{title}.txt'
+            
+            # Get the path to the email file
+            emailPath = os.path.join('ClientFolders', username, filename)
 
-            # Sending the email content to the client
+            # Read the email contents from the file
+            with open(emailPath, 'r') as emailFile:
+                content = emailFile.read()
+                
+                # Format the email content
+                emailContentStr = f"\nFrom: {sender}\nTo: {username}\nTime and Date Received: {dateTime}\nTitle: {title}\nContent Length: {contentLength}\nContents:\n{content}"
+
+            # Send the formatted email content to the client
             sendEncryptedMsg(connectionSocket, emailContentStr, symKey)
-
+        
+        # Handle invalid email index
+        else:
+            sendEncryptedMsg(connectionSocket, "\nInvalid email index.", symKey)
+    
+    # Handle errors in reading the email
     except Exception as e:
-        # Handling errors in reading the email file
-        sendEncryptedMsg(connectionSocket, f"Error reading email: {e}", symKey)
+        sendEncryptedMsg(connectionSocket, f"\nError reading email: {e}", symKey)
 
 def getChoice(connectionSocket, symKey):
     """
@@ -237,17 +337,23 @@ def handleEmailOperations(connectionSocket, username, symKey):
         choice = getChoice(connectionSocket, symKey)
         match choice:
             case '1':
-                # Handling email creation and sending
-                sendEncryptedMsg(connectionSocket, "Send the email details", symKey)
-                email_json = recvDecryptedMsg(connectionSocket, symKey)
-                email = json.loads(email_json)
-                processAndStoreEmail(email, username)
+                # Receive content length
+                contentLength = int(recvDecryptedMsg(connectionSocket, symKey))
+                # Receive the rest of the email information
+                emailInfo = json.loads(recvDecryptedMsg(connectionSocket, symKey))
+                # Process and store email
+                emailInfo['Time and Date'] = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+                processAndStoreEmail(emailInfo, username)
             case '2':
             # Handling inbox listing
                 displayInboxList(connectionSocket, username, symKey)
             case '3':
             # Handling displaying email contents
-                displayEmailContents(connectionSocket, username, symKey)
+                # Get the index of the email to be displayed
+                sendEncryptedMsg(connectionSocket, "the server request email index", symKey)
+                emailIndex = int(recvDecryptedMsg(connectionSocket, symKey))
+                # Display the email contents
+                displayEmailContents(connectionSocket, username, emailIndex, symKey)
             case '4':
             # Handling connection termination
                 print(f"Terminating connection with {username}")
